@@ -1,0 +1,14 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+		},
+		{
+			"path": "/home/duckjen/opt/nRF5x_MDK_8_11_1_GCC"
+		},
+		{
+			"path": "/home/duckjen/dev/repo/zephyr-project/subsys/bluetooth"
+		}
+	]
+}
