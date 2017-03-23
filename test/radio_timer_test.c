@@ -57,9 +57,9 @@ void test_sequential_schedule(void)
 	err = radio_timer_req(&timer2);
 	ASSERT(err == 0);
 
-	ASSERT(timer0._next == &timer1);
-	ASSERT(timer1._next == &timer2)
-	ASSERT(timer2._next == NULL);
+	ASSERT(timer0._internal.next == &timer1);
+	ASSERT(timer1._internal.next == &timer2)
+	ASSERT(timer2._internal.next == NULL);
 
 	ASSERT(radio_timer_head_get() == &timer0);
 }
@@ -90,9 +90,9 @@ void test_insert_between_events(void)
 	err = radio_timer_req(&timer2);
 	ASSERT(err == 0);
 
-	ASSERT(timer0._next == &timer2);
-	ASSERT(timer1._next == NULL)
-	ASSERT(timer2._next == &timer1);
+	ASSERT(timer0._internal.next == &timer2);
+	ASSERT(timer1._internal.next == NULL)
+	ASSERT(timer2._internal.next == &timer1);
 	ASSERT(radio_timer_head_get() == &timer0);
 }
 
@@ -122,9 +122,9 @@ void test_request_new_head(void)
 	err = radio_timer_req(&timer2);
 	ASSERT(err == 0);
 
-	ASSERT(timer0._next == NULL);
-	ASSERT(timer1._next == &timer0)
-	ASSERT(timer2._next == &timer1);
+	ASSERT(timer0._internal.next == NULL);
+	ASSERT(timer1._internal.next == &timer0)
+	ASSERT(timer2._internal.next == &timer1);
 	ASSERT(radio_timer_head_get() == &timer2);
 }
 
@@ -154,9 +154,9 @@ void test_request_wraps_around(void)
 	err = radio_timer_req(&timer2);
 	ASSERT(err == 0);
 
-	ASSERT(timer0._next == &timer1);
-	ASSERT(timer1._next == &timer2)
-	ASSERT(timer2._next == NULL);
+	ASSERT(timer0._internal.next == &timer1);
+	ASSERT(timer1._internal.next == &timer2)
+	ASSERT(timer2._internal.next == NULL);
 }
 
 void test_request_before_event_with_wraparound(void)
@@ -185,9 +185,9 @@ void test_request_before_event_with_wraparound(void)
 	err = radio_timer_req(&timer2);
 	ASSERT(err == 0);
 
-	ASSERT(timer0._next == &timer2);
-	ASSERT(timer1._next == &timer0)
-	ASSERT(timer2._next == NULL);
+	ASSERT(timer0._internal.next == &timer2);
+	ASSERT(timer1._internal.next == &timer0)
+	ASSERT(timer2._internal.next == NULL);
 }
 
 void test_request_just_shorter_than_allowed(void)
@@ -216,9 +216,9 @@ void test_request_just_shorter_than_allowed(void)
 	err = radio_timer_req(&timer2);
 	ASSERT(err == 0);
 
-	ASSERT(timer0._next == &timer1);
-	ASSERT(timer1._next == &timer2)
-	ASSERT(timer2._next == NULL);
+	ASSERT(timer0._internal.next == &timer1);
+	ASSERT(timer1._internal.next == &timer2)
+	ASSERT(timer2._internal.next == NULL);
 }
 
 int main(void)

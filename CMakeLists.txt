@@ -36,10 +36,10 @@ function (add_flash_target target)
 endfunction ()
 
 set(SRCS
-  "src/main.c"
   "${SDK_ROOT}/system_nrf52.c"
   "${SDK_ROOT}/gcc_startup_nrf52.S"
   "segger/SEGGER_RTT.c"
+  "segger/SEGGER_RTT_Syscalls_SES.c"
   )
 
 include_directories(
@@ -58,20 +58,51 @@ add_definitions(
   "-DNRF52832_XXAA"
   )
 
-set(target_name ${PROJECT_NAME})
+file( GLOB APP_SOURCES src/adv_test.c src/main.c src/jitter_test.c src/stream_test.c)
+foreach( testsourcefile ${APP_SOURCES} )
+    # I used a simple string replace, to cut off .cpp.
+    #string( REPLACE ".c" "" testname ${testsourcefile} )
+    get_filename_component (testname ${testsourcefile} NAME_WE)
 
-set(MY_LINK_FLAGS
-  "-Xlinker -Map=${CMAKE_CURRENT_BINARY_DIR}/${target_name}.map"
-  "-mthumb -mabi=aapcs -L${SDK_ROOT}/components/toolchain/gcc"
-  "-T${SDK_ROOT}/nrf52_xxaa.ld"
-  "-Wl,--gc-sections"
-  "-lc -lnosys"
-  )
-string(REGEX REPLACE ";" " " MY_LINK_FLAGS "${MY_LINK_FLAGS}")
+    set(MY_LINK_FLAGS
+    "-Xlinker -Map=${CMAKE_CURRENT_BINARY_DIR}/${testname}.map"
+    "-mthumb -mabi=aapcs -L${SDK_ROOT}/components/toolchain/gcc"
+    "-T${SDK_ROOT}/nrf52_xxaa.ld"
+    "-Wl,--gc-sections"
+    "-lc -lnosys"
+    )
+    string(REGEX REPLACE ";" " " MY_LINK_FLAGS "${MY_LINK_FLAGS}")
 
-add_executable(${target_name} "${SRCS}")
-set_target_properties(${target_name} PROPERTIES LINK_FLAGS "${MY_LINK_FLAGS}")
-target_link_libraries (${target_name} LightblueCore)
+    add_executable( ${testname} ${testsourcefile} ${SRCS})
+    # Make sure YourLib is linked to each app
+    set_target_properties(${testname} PROPERTIES LINK_FLAGS "${MY_LINK_FLAGS}")
+    target_link_libraries (${testname} LightblueCore)
 
-create_hex(${target_name})
-add_flash_target(${target_name})
+    create_hex(${testname})
+    add_flash_target(${testname})
+endforeach( testsourcefile ${APP_SOURCES} )
+
+file( GLOB APP_SOURCES test/*.c)
+foreach( testsourcefile ${APP_SOURCES} )
+    # I used a simple string replace, to cut off .cpp.
+    #string( REPLACE ".c" "" testname ${testsourcefile} )
+    get_filename_component (testname ${testsourcefile} NAME_WE)
+
+    set(MY_LINK_FLAGS
+    "-Xlinker -Map=${CMAKE_CURRENT_BINARY_DIR}/${testname}.map"
+    "-mthumb -mabi=aapcs -L${SDK_ROOT}/components/toolchain/gcc"
+    "-T${SDK_ROOT}/nrf52_xxaa.ld"
+    "-Wl,--gc-sections"
+    "-lc -lnosys"
+    )
+    string(REGEX REPLACE ";" " " MY_LINK_FLAGS "${MY_LINK_FLAGS}")
+
+    add_executable( ${testname} ${testsourcefile} ${SRCS})
+    # Make sure YourLib is linked to each app
+    set_target_properties(${testname} PROPERTIES LINK_FLAGS "${MY_LINK_FLAGS}")
+    target_link_libraries (${testname} LightblueCoreDebug)
+
+    create_hex(${testname})
+    add_flash_target(${testname})
+endforeach( testsourcefile ${APP_SOURCES} )
+

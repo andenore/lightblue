@@ -10,6 +10,10 @@ include_directories(
   "-DNRF52832_XXAA"
   )
 
-add_library(LightblueAdvertiser adv.c)
-add_library(LightblueCore event_q.c hal_radio.c hal_radio_timer.c radio_timer.c ../include/)
-add_library(LightblueCoreStream stream.c)
+set(BUILD_FLAGS
+  "-DUNIT_TEST"
+  )
+
+add_library(LightblueCore stream.c adv.c event_q.c hal_radio.c hal_radio_timer.c radio_timer.c )
+add_library(LightblueCoreDebug stream.c adv.c event_q.c hal_radio.c hal_radio_timer.c radio_timer.c )
+set_target_properties(LightblueCoreDebug PROPERTIES COMPILE_FLAGS ${BUILD_FLAGS})
