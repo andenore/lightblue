@@ -9,7 +9,7 @@
 
 static radio_timer_t timer[2];
 
-#define M_SCHEDULING_INTERVAL (1000001)
+#define M_SCHEDULING_INTERVAL (10000)
 
 void assert_handler(char *buf, uint16_t line)
 {
@@ -39,7 +39,7 @@ void radio_timeout_0(uint32_t state)
 		err = radio_timer_req(&timer[0]);
 		ASSERT(err == 0);
 
-		// radio_timer_sig_end();
+		radio_timer_sig_end();
 	}
 }
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 	NRF_TIMER1->PRESCALER = 4 << TIMER_PRESCALER_PRESCALER_Pos;
 	NRF_TIMER1->TASKS_START = 1;
 
-	/* Start timer when TIMER0 Compare is reached */
+	/* Capture timer when TIMER0 Compare is reached */
 	NRF_PPI->CH[0].TEP = (uint32_t)&NRF_TIMER1->TASKS_CAPTURE[0];
 	NRF_PPI->CH[0].EEP = (uint32_t)&NRF_TIMER0->EVENTS_COMPARE[0];
 
@@ -96,6 +96,7 @@ int main(int argc, char *argv[])
 
 	while (1)
 	{
+		__WFE();
 	}
 
 	return 0;
@@ -111,5 +112,6 @@ void SWI0_EGU0_IRQHandler(void)
 		cc = NRF_TIMER1->CC[0];
 		diff = M_SCHEDULING_INTERVAL - cc;
 		printf("CC = %d\n", diff);
+		// debug_print();
 	}
 }

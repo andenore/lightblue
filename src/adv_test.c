@@ -13,6 +13,8 @@ void assert_handler(char *buf, uint16_t line)
 
 	printf("Assertion %s @ %d\n", buf, line);
 
+	debug_print();
+
 	while (1);
 }
 

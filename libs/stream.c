@@ -133,6 +133,7 @@ void m_stream_tx_handler(uint32_t state)
 	switch (state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
+			printf("prepare\n");
 			hal_radio_init();
 			hal_radio_pkt_configure(0, 8, M_STREAM_DATA_LEN);
 			channel_set(15);
@@ -142,10 +143,14 @@ void m_stream_tx_handler(uint32_t state)
 
 			if (!stream_q_empty())
 			{
-				p_pdu = (m_stream_data_t *)stream_q_get();
+				/* Update m_pdu with head of stream_q */
+				p_pdu = (m_stream_data_t *)stream_q_head_peek();
 				ASSERT(p_pdu->len <= M_STREAM_DATA_LEN);
 				m_pdu.len = p_pdu->len;
 				memcpy(&m_pdu.payload.data[0], &p_pdu->buf[0], p_pdu->len);
+
+				/* dequeue */
+				(void)stream_q_get();
 			}
 			else
 			{
@@ -156,17 +161,18 @@ void m_stream_tx_handler(uint32_t state)
 			break;
 
 		case RADIO_TIMER_SIG_START:
-			DEBUG_TOGGLE(0);
+			printf("start\n");
 			
 			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
 			hal_radio_start_tx();
+			break;
 
+		case RADIO_TIMER_SIG_RADIO:
 			m_stream_timer.start_us += 10000;
 			m_stream_timer.func = m_stream_tx_handler;
 
 			err = radio_timer_req(&m_stream_timer);
 			ASSERT(err == 0);
-
 			radio_timer_sig_end();
 			break;
 

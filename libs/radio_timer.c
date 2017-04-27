@@ -46,7 +46,6 @@ uint32_t radio_timer_time_get(void)
 uint32_t radio_timer_req(radio_timer_t *p_timer)
 {
 	int32_t diff;
-	uint32_t orig_start_us;
 	bool new_head = false;
 	radio_timer_t *p_curr, *p_last;
 
@@ -55,14 +54,21 @@ uint32_t radio_timer_req(radio_timer_t *p_timer)
 	{
 		return -1;
 	}
+	
 	// TODO: Greater than or equal?
-	orig_start_us = p_timer->start_us;
 	if (p_timer->start_us >= M_RADIO_TIMER_MAX_VAL_US) {
 		p_timer->start_us -= M_RADIO_TIMER_MAX_VAL_US;
 	}
+
+	
 	p_timer->_internal.start_rtc_unit = ((uint64_t)M_RADIO_TIMER_US_TO_FEMTO(p_timer->start_us) + (M_RADIO_TIMER_UNIT_FEMTO/2)) / M_RADIO_TIMER_UNIT_FEMTO;
+	p_timer->_internal.start_timer_unit = ((M_RADIO_TIMER_US_TO_FEMTO(p_timer->start_us) + 2*M_RADIO_TIMER_UNIT_FEMTO) - ((uint64_t)p_timer->_internal.start_rtc_unit * M_RADIO_TIMER_UNIT_FEMTO)) / M_RADIO_TIMER_FEMTO_TO_US_FACTOR; 
 	p_timer->_internal.start_rtc_unit = (p_timer->_internal.start_rtc_unit - 2) & M_RADIO_TIMER_MAX_VAL;
-	p_timer->_internal.start_timer_unit = (M_RADIO_TIMER_US_TO_FEMTO(orig_start_us) - ((uint64_t)p_timer->_internal.start_rtc_unit * M_RADIO_TIMER_UNIT_FEMTO)) / M_RADIO_TIMER_FEMTO_TO_US_FACTOR; 
+
+	// printf("start_us: %d\n", (unsigned int)p_timer->start_us);
+	// printf("start_rtc_unit: %d\n", (unsigned int)p_timer->_internal.start_rtc_unit);
+	// printf("start_timer_unit: %d\n", (unsigned int)p_timer->_internal.start_timer_unit);
+	
 
 	p_timer->_internal.next = NULL;
 
@@ -151,10 +157,10 @@ void debug_print(void)
 		p_curr = p_curr->_internal.next;			
 	}
 
-	printf("RTC   CC[RTC_COMPARE_PRETICK] = 0x%08x\n", (unsigned int)NRF_RTC0->CC[RTC_COMPARE_PRETICK]);
-	printf("RTC   CC[RTC_COMPARE_START]   = 0x%08x\n", (unsigned int)NRF_RTC0->CC[RTC_COMPARE_START]);
-	printf("TIMER CC[START_OFFSET]        = 0x%08x\n", (unsigned int)NRF_TIMER0->CC[0]);
-	printf("TIMER CC[TIMEOUT]             = 0x%08x\n", (unsigned int)NRF_TIMER0->CC[1]);
+	printf("RTC   CC[RTC_COMPARE_PRETICK] = %d  0x%08x\n", (unsigned int)NRF_RTC0->CC[RTC_COMPARE_PRETICK], (unsigned int)NRF_RTC0->INTENSET);
+	printf("RTC   CC[RTC_COMPARE_START]   = %d\n", (unsigned int)NRF_RTC0->CC[RTC_COMPARE_START]);
+	printf("TIMER CC[START_OFFSET]        = %d  0x%08x\n", (unsigned int)NRF_TIMER0->CC[0], (unsigned int)NRF_TIMER0->INTENSET);
+	printf("TIMER CC[TIMEOUT]             = %d\n", (unsigned int)NRF_TIMER0->CC[1]);
 }
 
 void radio_timer_sig_end(void)
@@ -201,6 +207,7 @@ void radio_timer_handler(uint32_t evt)
 		{
 			p_timer_active = p_timer_head;
 			p_timer_head = p_timer_head->_internal.next;
+			p_timer_active->_internal.next = NULL;
 
 			rtc_compare_clr(RTC_COMPARE_PRETICK);
 			ASSERT(p_timer_active->_internal.state == RADIO_TIMER_STATE_SCHEDULED);
@@ -215,7 +222,6 @@ void radio_timer_handler(uint32_t evt)
 			timer_compare_clr();
 
 			ASSERT(p_timer_active->_internal.state == RADIO_TIMER_STATE_PREPARE);
-			p_timer_active->_internal.next = NULL;
 			p_timer_active->_internal.state = RADIO_TIMER_STATE_START;
 			p_timer_active->func(RADIO_TIMER_SIG_START);
 		}
@@ -224,7 +230,7 @@ void radio_timer_handler(uint32_t evt)
 		case HAL_RADIO_TIMER_EVT_RADIO:
 		{
 			ASSERT(p_timer_active->_internal.state == RADIO_TIMER_STATE_START);
-			//p_timer_active->func(RADIO_TIMER_SIG_RADIO);
+			p_timer_active->func(RADIO_TIMER_SIG_RADIO);
 		}
 		break;
 

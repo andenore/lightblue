@@ -39,16 +39,16 @@ int main(int argc, char *argv[])
 
 	memset(&buf[0], 0, sizeof(buf));
 
-	stream_rx_start();
+	stream_tx_start();
 
 	while (1)
 	{
 
-		/*if (stream_q_put(&buf[0], sizeof(buf)) == 0)
+		if (stream_q_put(&buf[0], sizeof(buf)) == 0)
 		{
 			printf("new packet\n");
 			buf[0] ++;
-		}*/
+		}
 		
 		__WFE();
 

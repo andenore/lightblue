@@ -1,4 +1,19 @@
 {
+	"build_systems":
+	[
+		{
+			"file_regex": "(.+[^:]):(\\d+):(\\d+): (?:fatal )?((?:error|warning): .+)$",
+			"name": "lightblue",
+			"shell_cmd": "make -j8",
+			"syntax": "Packages/CMakeBuilder/Syntax/Make.sublime-syntax",
+			"variants": null,
+			"working_dir": "/tmp/tmppskdf3"
+		}
+	],
+	"cmake":
+	{
+		"build_folder": "/tmp/tmppskdf3"
+	},
 	"folders":
 	[
 		{

@@ -9,4 +9,8 @@
 #define DEBUG_CLR(x) (NRF_GPIO->OUTSET = (0x1 << (17+x)))
 #define DEBUG_TOGGLE(x) ((NRF_GPIO->OUT & (0x1 << (17+x))) ? (NRF_GPIO->OUTCLR = ((0x1 << (17+x)))) : (NRF_GPIO->OUTSET = ((0x1 << (17+x)))))
 
+#define TEST_BEGIN(TESTNAME) void  TESTNAME (void) { printf("Begin test: %s\n", #TESTNAME); 
+
+#define TEST_END() printf("\n"); }
+
 #endif

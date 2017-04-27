@@ -55,6 +55,13 @@ void rtc_compare_clr(uint32_t compare_reg)
 // 	return retval;
 // }
 
+typedef struct {
+	bool timeout_enabled;
+	uint32_t timeout_val;
+} m_hal_timer_config_t;
+
+static m_hal_timer_config_t m_hal_timer_config;
+
 void timer_init(void)
 {
 	NVIC_ClearPendingIRQ(TIMER_IRQn);
@@ -64,9 +71,12 @@ void timer_init(void)
 	TIMER->BITMODE = TIMER_BITMODE_BITMODE_32Bit << TIMER_BITMODE_BITMODE_Pos;
 	TIMER->PRESCALER = 4 << TIMER_PRESCALER_PRESCALER_Pos;
 
+	TIMER->INTENCLR = 0xFFFFFFFF;
+
 	/* Start timer when RTC Compare is reached */
 	// NRF_PPI->CH[M_RTC_TIMER_PPICH].TEP = (uint32_t)&TIMER->TASKS_START;
 	// NRF_PPI->CH[M_RTC_TIMER_PPICH].EEP = (uint32_t)&RTC->EVENTS_COMPARE[0];
+
 	NRF_PPI->CHENCLR = (1UL << M_RTC_TIMER_PPICH);
 }
 
@@ -92,14 +102,9 @@ void timer_compare_clr(void)
 
 void timer_timeout_set(uint32_t compare_value)
 {
-	/**@todo should be saved in variable and applied when START event occurs */
-	TIMER->CC[1] = compare_value;
-	TIMER->INTENSET = TIMER_INTENSET_COMPARE1_Set << TIMER_INTENSET_COMPARE1_Pos;
-
-	TIMER->SHORTS = (TIMER_SHORTS_COMPARE1_CLEAR_Enabled << TIMER_SHORTS_COMPARE1_CLEAR_Pos) |
-									(TIMER_SHORTS_COMPARE1_STOP_Enabled << TIMER_SHORTS_COMPARE1_STOP_Pos);
-
-
+	ASSERT(compare_value > 10); /**@todo: check how short the timeout can be */
+	m_hal_timer_config.timeout_val = compare_value;
+	m_hal_timer_config.timeout_enabled = true;
 }
 
 void timer_timeout_clr(void)
@@ -137,7 +142,26 @@ void TIMER_IRQHandler(void)
 	if (TIMER->EVENTS_COMPARE[0] != 0)
 	{
 		TIMER->EVENTS_COMPARE[0] = 0;
+		if (m_hal_timer_config.timeout_enabled)
+		{
+			TIMER->CC[1] = m_hal_timer_config.timeout_val;
+			m_hal_timer_config.timeout_enabled = false;
+			TIMER->INTENSET = TIMER_INTENSET_COMPARE1_Set << TIMER_INTENSET_COMPARE1_Pos;
+
+			TIMER->SHORTS = (TIMER_SHORTS_COMPARE1_CLEAR_Enabled << TIMER_SHORTS_COMPARE1_CLEAR_Pos) |
+											(TIMER_SHORTS_COMPARE1_STOP_Enabled << TIMER_SHORTS_COMPARE1_STOP_Pos);
+		}
+		else
+		{
+			TIMER->TASKS_STOP = 1;
+			TIMER->TASKS_CLEAR = 1;
+			TIMER->INTENCLR = (TIMER_INTENCLR_COMPARE0_Clear << TIMER_INTENCLR_COMPARE0_Pos) |
+												(TIMER_INTENCLR_COMPARE1_Clear << TIMER_INTENCLR_COMPARE1_Pos);
+		}
+
 		radio_timer_handler(HAL_RADIO_TIMER_EVT_START);
+
+
 	}
 
 	if (TIMER->EVENTS_COMPARE[1] != 0)
@@ -147,52 +171,79 @@ void TIMER_IRQHandler(void)
 	}
 }
 
-#else 
+#else // UNIT_TEST BEGIN
+
+typedef struct {
+	uint32_t compare_val;
+	bool enable_irq;
+} compare_reg_t;
+
+typedef struct {
+	compare_reg_t compare_reg[2];
+	bool enabled;
+	uint32_t counter;
+} rtc_t;
+
+typedef struct {
+	compare_reg_t compare_reg[1];
+	bool enabled;
+	uint32_t counter;
+	bool clear_on_evt;
+	uint32_t shorts;
+} timer_t;
+
+static rtc_t rtc;
+static timer_t timer;
 
 
 void rtc_init(void)
 {
+	rtc.enabled = true;
 }
 
 uint32_t rtc_counter_get(void)
 {
-	return 0;
+	return rtc.counter;
 }
 
 void rtc_compare_set(uint32_t compare_value, uint32_t compare_reg, bool enable_irq)
 {
-	
+	ASSERT(compare_reg < 2);
+	rtc.compare_reg[compare_reg].compare_val = compare_value & 0x00FFFFFF;
+	rtc.compare_reg[compare_reg].enable_irq = enable_irq;
+
+	printf("RTC.CC[%d] = %d   irq_enable = %d\n", (int)compare_reg, (unsigned int)compare_value, (int)enable_irq);
 }
 
 void rtc_compare_clr(uint32_t compare_reg)
 {
-	
-}
-
-uint32_t rtc_compare_evt(void)
-{
-	return 1;
+	ASSERT(compare_reg < 2);
+	rtc.compare_reg[compare_reg].enable_irq = false;	
 }
 
 void timer_init(void)
 {
+	timer.enabled = true;
+	timer.counter = 0;
 }
 
 void timer_compare_set(uint32_t compare_value)
 {
+	timer.compare_reg[0].compare_val = compare_value;
+	timer.compare_reg[0].enable_irq = true;
+	printf("TIMER.CC[0] = %d", (unsigned int)compare_value);
 }
 
 void timer_compare_clr(void)
 {
+	timer.compare_reg[0].enable_irq = false;
 }
 
 void timer_stop(void)
 {
+	timer.enabled = false;
+	timer.counter = 0;
 }
 
-uint32_t timer_compare_evt(void)
-{
-	return 1;
-}
 
-#endif // UNIT_TEST
+#endif // UNIT_TEST END

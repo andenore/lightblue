@@ -56,6 +56,7 @@ void m_adv_timeout_handler(uint32_t state)
 	switch (state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
+			printf("prepare\n");
 			hal_radio_init();
 			hal_radio_pkt_configure(0, 6, 37);
 			channel_set(37);
@@ -82,26 +83,27 @@ void m_adv_timeout_handler(uint32_t state)
 
 			packet = (uint8_t *)&adv_pdu;
 
-			printf("RANDOMADDR = %d, DEVICEADDR = 0x%02x%02x%02x%02x%02x%02x\n", (int)(NRF_FICR->DEVICEADDRTYPE & 0x1), packet[2], packet[3], packet[4], packet[5], packet[6], packet[7]);
+			// printf("RANDOMADDR = %d, DEVICEADDR = 0x%02x%02x%02x%02x%02x%02x\n", (int)(NRF_FICR->DEVICEADDRTYPE & 0x1), packet[2], packet[3], packet[4], packet[5], packet[6], packet[7]);
 			break;
 
 		case RADIO_TIMER_SIG_START:
-			DEBUG_TOGGLE(0);
+			printf("start\n");
 
 
 			uint8_t *ptr = (uint8_t *)NRF_RADIO->PACKETPTR;
 			uint8_t i;
 			for (i=0; i<15; i++)
 			{
-				printf("x[%d] = %02x ", (int)i, ptr[i]);
+				// printf("x[%d] = %02x ", (int)i, ptr[i]);
 			}
-			printf("\n");
+			// printf("\n");
 			
 			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
 			hal_radio_start_tx();
+			break;
 
-			printf("start tx\n");
-
+		case RADIO_TIMER_SIG_RADIO:
+			printf("radio\n");
 			m_adv_timer.start_us += 66000;
 			m_adv_timer.func = m_adv_timeout_handler;
 
