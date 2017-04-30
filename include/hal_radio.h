@@ -22,7 +22,10 @@ void hal_radio_disable_on_tmo_evt_set(void);
 void hal_radio_disable_on_tmo_evt_clr(void);
 
 void hal_radio_start_tx(void);
+void hal_radio_start_tx_on_start_evt(void);
 void hal_radio_start_rx(void);
 void hal_radio_start_rx_on_start_evt(void);
+
+uint32_t hal_radio_start_to_address_time_get(void);
 
 #endif // __HAL_RADIO_

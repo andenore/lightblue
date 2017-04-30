@@ -7,6 +7,7 @@
 
 #define M_PPICH_TIMER0_CC1_TO_RADIO_DISABLE 		(22)
 #define M_PPICH_TIMER0_CC0_TO_RADIO_RXEN 				(21)
+#define M_PPICH_TIMER0_CC0_TO_RADIO_TXEN 				(20)
 #define M_PPICH_RADIO_ADDRESS_TO_TIMER_CAPTURE1 (26)
 
 void hal_radio_init(void)
@@ -121,6 +122,12 @@ void hal_radio_start_tx(void)
 	NRF_RADIO->TASKS_TXEN = 1;
 }
 
+void hal_radio_start_tx_on_start_evt(void)
+{
+	NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk | RADIO_SHORTS_END_DISABLE_Msk;
+	NRF_PPI->CHENSET = (1UL << M_PPICH_TIMER0_CC0_TO_RADIO_TXEN);
+}
+
 void hal_radio_start_rx(void)
 {
 	NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk | RADIO_SHORTS_END_DISABLE_Msk;
@@ -131,7 +138,11 @@ void hal_radio_start_rx_on_start_evt(void)
 {
 	NRF_RADIO->SHORTS = RADIO_SHORTS_READY_START_Msk | RADIO_SHORTS_END_DISABLE_Msk;
 	NRF_PPI->CHENSET = (1UL << M_PPICH_TIMER0_CC0_TO_RADIO_RXEN) | (1UL << M_PPICH_RADIO_ADDRESS_TO_TIMER_CAPTURE1);
+}
 
+uint32_t hal_radio_start_to_address_time_get(void)
+{
+	return NRF_TIMER0->CC[1];
 }
 
 void hal_radio_disable_on_tmo_evt_set(void)
@@ -149,6 +160,7 @@ void RADIO_IRQHandler(void)
 {
 	if (NRF_RADIO->EVENTS_DISABLED != 0)
 	{
+		hal_radio_disable_on_tmo_evt_clr();
 		NRF_RADIO->EVENTS_DISABLED = 0;
 
 		if (NRF_RADIO->EVENTS_END != 0)

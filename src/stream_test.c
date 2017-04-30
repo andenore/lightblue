@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 
 		if (stream_q_put(&buf[0], sizeof(buf)) == 0)
 		{
-			printf("new packet\n");
+			printf("new packet: %d\n", (unsigned int)buf[0]);
 			buf[0] ++;
 		}
 		

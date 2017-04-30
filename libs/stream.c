@@ -94,6 +94,16 @@ bool stream_q_empty(void)
 	return (m_stream_q.tail == m_stream_q.head);
 }
 
+bool stream_q_full(void)
+{
+	uint32_t next = m_stream_q.tail + 1;
+	if (next == M_STREAM_Q_NUM)
+	{
+		next = 0;
+	}
+	return (next == m_stream_q.head);
+}
+
 static void channel_set(uint32_t channel)
 {
 	switch (channel) {
@@ -133,6 +143,7 @@ void m_stream_tx_handler(uint32_t state)
 	switch (state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
+			DEBUG_TOGGLE(0);
 			printf("prepare\n");
 			hal_radio_init();
 			hal_radio_pkt_configure(0, 8, M_STREAM_DATA_LEN);
@@ -140,6 +151,7 @@ void m_stream_tx_handler(uint32_t state)
 			hal_radio_access_address_set((uint8_t *)&aa);
 			hal_radio_crc_configure(((0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16)), M_STREAM_CRC_INIT);
 			hal_radio_packetptr_set((uint8_t *)&m_pdu);
+			hal_radio_start_tx_on_start_evt();
 
 			if (!stream_q_empty())
 			{
@@ -161,10 +173,10 @@ void m_stream_tx_handler(uint32_t state)
 			break;
 
 		case RADIO_TIMER_SIG_START:
+			DEBUG_TOGGLE(1);
 			printf("start\n");
 			
 			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
-			hal_radio_start_tx();
 			break;
 
 		case RADIO_TIMER_SIG_RADIO:
@@ -186,30 +198,33 @@ void m_stream_rx_handler(uint32_t state)
 {
 	uint32_t err;
 	uint32_t aa = M_STREAM_ACCESS_ADDR;
+	uint32_t start_to_address_time;
 
 	// m_stream_data_t *p_pdu = NULL;
 
 	switch (state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
+			printf("prepare\n");
+
 			hal_radio_init();
 			hal_radio_pkt_configure(0, 8, M_STREAM_DATA_LEN);
 			channel_set(15);
 			hal_radio_access_address_set((uint8_t *)&aa);
 			hal_radio_crc_configure(((0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16)), M_STREAM_CRC_INIT);
 			hal_radio_packetptr_set((uint8_t *)&m_pdu);
-			radio_timer_timeout_set(1000);
+			radio_timer_timeout_set(3000);
 			hal_radio_disable_on_tmo_evt_set();
 
 			hal_radio_start_rx_on_start_evt();
-
-			printf("prepare\n");
 
 			break;
 
 		case RADIO_TIMER_SIG_START:
 			DEBUG_TOGGLE(0);
 			printf("start\n");
+
+			// debug_print();
 			
 			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
 			
@@ -219,7 +234,7 @@ void m_stream_rx_handler(uint32_t state)
 			DEBUG_TOGGLE(1);
 			printf("timeout\n");
 
-			m_stream_timer.start_us += 10000;
+			m_stream_timer.start_us += 11000;
 			m_stream_timer.func = m_stream_rx_handler;
 
 			err = radio_timer_req(&m_stream_timer);
@@ -229,7 +244,18 @@ void m_stream_rx_handler(uint32_t state)
 			break;
 
 		case RADIO_TIMER_SIG_RADIO:
+			printf("radio\n");
 			m_stream_rx_pkt();
+
+			start_to_address_time = hal_radio_start_to_address_time_get();
+			printf("start-to-addr: %d\n", (unsigned int)start_to_address_time);
+			m_stream_timer.start_us += 10000 + start_to_address_time - 200;
+			m_stream_timer.func = m_stream_rx_handler;
+
+			err = radio_timer_req(&m_stream_timer);
+			ASSERT(err == 0);
+
+			radio_timer_sig_end();
 			break;
 
 		default:
@@ -242,9 +268,11 @@ static void m_stream_rx_pkt(void)
 {
 	if (hal_radio_crc_match())
 	{
-		if (!stream_q_empty())
+		printf("Got packet: %d\n", (unsigned int)m_pdu.rfu0);
+		if (!stream_q_full())
 		{
 			stream_q_put(&m_pdu.payload.data[0], m_pdu.len);
+			//printf("Got packet: %d", m_pdu.payload.data[0]);
 			/**@todo notify of packet reception */
 		}
 	}

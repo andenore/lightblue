@@ -28,7 +28,7 @@ typedef struct radio_timer {
 	} _internal;
 } radio_timer_t;
 
-radio_timer_t * radio_timer_head_get(void);
+volatile radio_timer_t * radio_timer_head_get(void);
 
 void radio_timer_init(void);
 

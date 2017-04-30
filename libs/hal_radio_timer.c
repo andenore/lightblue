@@ -1,7 +1,7 @@
 #include "hal_radio_timer.h"
 
-static NRF_RTC_Type *RTC = (NRF_RTC_Type *)NRF_RTC0_BASE;
-static NRF_TIMER_Type *TIMER = (NRF_TIMER_Type *)NRF_TIMER0_BASE;
+static volatile NRF_RTC_Type *RTC = (NRF_RTC_Type *)NRF_RTC0_BASE;
+static volatile NRF_TIMER_Type *TIMER = (NRF_TIMER_Type *)NRF_TIMER0_BASE;
 
 #ifndef UNIT_TEST
 
@@ -98,6 +98,8 @@ void timer_compare_clr(void)
 	// printf("timer compare clear\n");
 	TIMER->INTENCLR = TIMER_INTENSET_COMPARE0_Set << TIMER_INTENSET_COMPARE0_Pos;
 	NRF_PPI->CHENCLR = (1UL << M_RTC_TIMER_PPICH);
+	NVIC_ClearPendingIRQ(TIMER_IRQn);
+	TIMER->EVENTS_COMPARE[0] = 0;
 }
 
 void timer_timeout_set(uint32_t compare_value)
@@ -105,6 +107,7 @@ void timer_timeout_set(uint32_t compare_value)
 	ASSERT(compare_value > 10); /**@todo: check how short the timeout can be */
 	m_hal_timer_config.timeout_val = compare_value;
 	m_hal_timer_config.timeout_enabled = true;
+	// printf("timeout set\n");
 }
 
 void timer_timeout_clr(void)
@@ -113,6 +116,7 @@ void timer_timeout_clr(void)
 	TIMER->TASKS_STOP = 1;
 	TIMER->TASKS_CLEAR = 1;
 	NVIC_ClearPendingIRQ(TIMER_IRQn);
+	TIMER->EVENTS_COMPARE[1] = 0;
 }
 
 uint32_t timer_timeout_evt_get(void)
@@ -139,20 +143,33 @@ void RTC_IRQHandler(void)
 
 void TIMER_IRQHandler(void)
 {
+	if (TIMER->EVENTS_COMPARE[1] != 0)
+	{
+		TIMER->EVENTS_COMPARE[1] = 0;
+		TIMER->EVENTS_COMPARE[0] = 0;
+		TIMER->INTENCLR = (TIMER_INTENCLR_COMPARE0_Clear << TIMER_INTENCLR_COMPARE0_Pos) |
+											(TIMER_INTENCLR_COMPARE1_Clear << TIMER_INTENCLR_COMPARE1_Pos);
+		NVIC_ClearPendingIRQ(TIMER_IRQn);
+
+		radio_timer_handler(HAL_RADIO_TIMER_EVT_TIMEOUT);
+	}
+
 	if (TIMER->EVENTS_COMPARE[0] != 0)
 	{
 		TIMER->EVENTS_COMPARE[0] = 0;
 		if (m_hal_timer_config.timeout_enabled)
 		{
-			TIMER->CC[1] = m_hal_timer_config.timeout_val;
 			m_hal_timer_config.timeout_enabled = false;
+
+			TIMER->CC[1] = m_hal_timer_config.timeout_val;			
+			TIMER->INTENCLR = TIMER_INTENCLR_COMPARE0_Clear << TIMER_INTENCLR_COMPARE0_Pos;
 			TIMER->INTENSET = TIMER_INTENSET_COMPARE1_Set << TIMER_INTENSET_COMPARE1_Pos;
 
 			TIMER->SHORTS = (TIMER_SHORTS_COMPARE1_CLEAR_Enabled << TIMER_SHORTS_COMPARE1_CLEAR_Pos) |
 											(TIMER_SHORTS_COMPARE1_STOP_Enabled << TIMER_SHORTS_COMPARE1_STOP_Pos);
 		}
 		else
-		{
+		{	
 			TIMER->TASKS_STOP = 1;
 			TIMER->TASKS_CLEAR = 1;
 			TIMER->INTENCLR = (TIMER_INTENCLR_COMPARE0_Clear << TIMER_INTENCLR_COMPARE0_Pos) |
@@ -160,14 +177,6 @@ void TIMER_IRQHandler(void)
 		}
 
 		radio_timer_handler(HAL_RADIO_TIMER_EVT_START);
-
-
-	}
-
-	if (TIMER->EVENTS_COMPARE[1] != 0)
-	{
-		TIMER->EVENTS_COMPARE[1] = 0;
-		radio_timer_handler(HAL_RADIO_TIMER_EVT_TIMEOUT);
 	}
 }
 

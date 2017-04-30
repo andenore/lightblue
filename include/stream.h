@@ -10,4 +10,8 @@ int stream_q_put(uint8_t *data, uint8_t len);
 
 bool stream_q_empty(void);
 
+uint8_t * stream_q_head_peek(void);
+
+uint8_t * stream_q_get(void);
+
 #endif // __STREAM_H
