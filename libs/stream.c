@@ -304,8 +304,6 @@ void stream_tx_start(void)
 
 	m_stream_q_init();
 
-	printf("Starting TX stream...\n");
-
 	radio_timer_init();
 
 	memset(&m_stream_timer, 0, sizeof(radio_timer_t));
@@ -321,8 +319,6 @@ void stream_rx_start(void)
 	uint32_t err;
 
 	m_stream_q_init();
-
-	printf("Starting RX stream...\n");
 
 	radio_timer_init();
 

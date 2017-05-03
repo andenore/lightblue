@@ -58,7 +58,7 @@ add_definitions(
   "-DNRF52832_XXAA"
   )
 
-file( GLOB APP_SOURCES src/adv_test.c src/main.c src/jitter_test.c src/stream_test.c src/stream_test_rx.c)
+file( GLOB APP_SOURCES src/adv_test.c src/main.c src/jitter_test.c src/stream_test_tx.c src/stream_test_rx.c)
 foreach( testsourcefile ${APP_SOURCES} )
     # I used a simple string replace, to cut off .cpp.
     #string( REPLACE ".c" "" testname ${testsourcefile} )

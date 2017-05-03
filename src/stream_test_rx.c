@@ -30,7 +30,7 @@ int32_t m_cumulative_error = 0;
 
 int main(int argc, char *argv[])
 {
-  printf("Starting stream...\n");
+  printf("Starting RX stream...\n");
 
   DEBUG_INIT();
 

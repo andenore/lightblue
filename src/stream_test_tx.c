@@ -29,7 +29,7 @@ stream_data_t data;
 
 int main(int argc, char *argv[])
 {
-	printf("Starting stream...\n");
+	printf("Starting TX stream...\n");
 
 	DEBUG_INIT();
 
