@@ -3,15 +3,28 @@
 
 #include <stdbool.h>
 
+#define M_STREAM_DATA_LEN (255)
+
+#define STREAM_EVENT_IRQn       (SWI5_EGU5_IRQn)
+#define STREAM_EVENT_IRQHandler (SWI5_EGU5_IRQHandler)
+
+typedef struct {
+  uint8_t len;
+  uint8_t buf[M_STREAM_DATA_LEN];
+  int8_t  timestamp;
+} stream_data_t;
+
 void stream_tx_start(void);
 void stream_rx_start(void);
 
-int stream_q_put(uint8_t *data, uint8_t len);
+int stream_q_put(stream_data_t *data);
 
 bool stream_q_empty(void);
 
-uint8_t * stream_q_head_peek(void);
+bool stream_q_full(void);
 
-uint8_t * stream_q_get(void);
+stream_data_t * stream_q_head_peek(void);
+
+stream_data_t * stream_q_get(void);
 
 #endif // __STREAM_H

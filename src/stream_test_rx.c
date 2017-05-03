@@ -25,7 +25,8 @@ void HardFault_Handler(void)
   while (1);
 }
 
-uint8_t buf[255];
+stream_data_t data;
+int32_t m_cumulative_error = 0;
 
 int main(int argc, char *argv[])
 {
@@ -37,8 +38,10 @@ int main(int argc, char *argv[])
   NRF_CLOCK->TASKS_HFCLKSTART = 1;
   while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
 
-  memset(&buf[0], 0, sizeof(buf));
+  memset(&data, 0, sizeof(data));
 
+  NVIC_SetPriority(STREAM_EVENT_IRQn, 3);
+  NVIC_EnableIRQ(STREAM_EVENT_IRQn);
   stream_rx_start();
 
   while (1)
@@ -48,4 +51,15 @@ int main(int argc, char *argv[])
   }
 
   return 0;
+}
+
+void STREAM_EVENT_IRQHandler(void)
+{
+  stream_data_t *p_data = stream_q_head_peek();
+  m_cumulative_error += p_data->timestamp;
+  printf("Got new packet 0x%02x %d %d\n", p_data->buf[0], p_data->timestamp, (int)m_cumulative_error);
+
+  (void)stream_q_get();
+
+
 }

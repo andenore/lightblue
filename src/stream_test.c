@@ -25,7 +25,7 @@ void HardFault_Handler(void)
 	while (1);
 }
 
-uint8_t buf[255];
+stream_data_t data;
 
 int main(int argc, char *argv[])
 {
@@ -37,17 +37,18 @@ int main(int argc, char *argv[])
 	NRF_CLOCK->TASKS_HFCLKSTART = 1;
 	while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
 
-	memset(&buf[0], 0, sizeof(buf));
+	memset(&data, 0, sizeof(data));
+	data.len = 255;
 
 	stream_tx_start();
 
 	while (1)
 	{
 
-		if (stream_q_put(&buf[0], sizeof(buf)) == 0)
+		if (stream_q_put(&data) == 0)
 		{
-			printf("new packet: %d\n", (unsigned int)buf[0]);
-			buf[0] ++;
+			//printf("new packet: %d\n", (unsigned int)buf[0]);
+			data.buf[0] ++;
 		}
 		
 		__WFE();
