@@ -56,9 +56,10 @@ link_directories(
 add_definitions(
   "-DNRF52"
   "-DNRF52832_XXAA"
+  "-D__HEAP_SIZE=16384"
   )
 
-file( GLOB APP_SOURCES src/adv_test.c src/main.c src/jitter_test.c src/stream_test_tx.c src/stream_test_rx.c)
+file( GLOB APP_SOURCES src/adv_test.c src/main.c src/jitter_test.c src/stream_test_tx.c src/stream_test_rx.c src/codec_test.c src/pdm_stream_tx.c  src/pdm_stream_rx.c)
 foreach( testsourcefile ${APP_SOURCES} )
     # I used a simple string replace, to cut off .cpp.
     #string( REPLACE ".c" "" testname ${testsourcefile} )
@@ -76,7 +77,7 @@ foreach( testsourcefile ${APP_SOURCES} )
     add_executable( ${testname} ${testsourcefile} ${SRCS})
     # Make sure YourLib is linked to each app
     set_target_properties(${testname} PROPERTIES LINK_FLAGS "${MY_LINK_FLAGS}")
-    target_link_libraries (${testname} LightblueCore)
+    target_link_libraries (${testname} LightblueCore Audio Opus Celt m)
 
     create_hex(${testname})
     add_flash_target(${testname})

@@ -148,7 +148,7 @@ void m_stream_tx_handler(uint32_t state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
 			DEBUG_TOGGLE(0);
-			printf("prepare\n");
+			// printf("prepare\n");
 			hal_radio_init();
 			hal_radio_pkt_configure(0, 8, M_STREAM_DATA_LEN);
 			channel_set(15);
@@ -172,7 +172,7 @@ void m_stream_tx_handler(uint32_t state)
 			}
 			else
 			{
-				printf("empty packet\n");
+				// printf("empty packet\n");
 				m_pdu.len = 0;
 			}
 
@@ -180,7 +180,7 @@ void m_stream_tx_handler(uint32_t state)
 
 		case RADIO_TIMER_SIG_START:
 			DEBUG_TOGGLE(1);
-			printf("start\n");
+			// printf("start\n");
 			
 			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
 			break;
@@ -284,7 +284,7 @@ static void m_stream_rx_pkt(void)
 			memcpy(&p_data->buf[0], &m_pdu.payload.data[0], m_pdu.len);
 			p_data->timestamp = hal_radio_start_to_address_time_get() - 200;
 			stream_q_put(NULL);
-			//printf("Got packet: %d", m_pdu.payload.data[0]);
+			// printf("Got packet: %d", m_pdu.payload.data[0]);
 			/**@todo notify of packet reception */
 
 			NVIC_SetPendingIRQ(STREAM_EVENT_IRQn);

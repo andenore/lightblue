@@ -20,10 +20,13 @@
 			"path": "."
 		},
 		{
-			"path": "/home/duckjen/opt/nRF5x_MDK_8_11_1_GCC"
+			"path": "h:ome\\duckjen\\opt\\nRF5x_MDK_8_11_1_GCC"
 		},
 		{
-			"path": "/home/duckjen/dev/repo/zephyr-project/subsys/bluetooth"
+			"path": "h:ome\\duckjen\\dev\\repo\\zephyr-project\\subsys\\bluetooth"
+		},
+		{
+			"path": "C:\\dev\\repo\\opus"
 		}
 	]
 }
