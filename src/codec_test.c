@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
   NRF_TIMER0->PRESCALER = 4;
 
 
-  codec_wrapper_init();
+  encoder_wrapper_init();
 
   printf("Encoding..\n");
   NRF_TIMER0->TASKS_START = 1;

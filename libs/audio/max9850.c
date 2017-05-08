@@ -17,7 +17,7 @@
 #define DEVICE_ADDR (0x10)
 #define PIN_SCL     (27)
 #define PIN_SDA     (26)
-//#define PIN_SD      (11)
+#define PIN_SD      (11)
 
 // Start with -7.5 dB
 static uint8_t m_volume = 0x0E;
@@ -55,7 +55,7 @@ void max9850_volume_down(void)
 void max9850_start(void)
 {
   uint32_t tmo;
-  /*
+  
   NRF_GPIO->PIN_CNF[PIN_SD] =  (GPIO_PIN_CNF_DIR_Output << GPIO_PIN_CNF_DIR_Pos) |
                                (GPIO_PIN_CNF_DRIVE_H0H1 << GPIO_PIN_CNF_DRIVE_Pos) |
                                (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos) |
@@ -63,40 +63,37 @@ void max9850_start(void)
                                (GPIO_PIN_CNF_SENSE_Disabled << GPIO_PIN_CNF_SENSE_Pos);
   
   NRF_GPIO->OUTCLR = (1 << PIN_SD);
-  */
+  
   
   tmo = 50000;
   while (tmo-- ) ;
   
   i2c_init(DEVICE_ADDR, PIN_SCL, PIN_SDA);
   
-  //NRF_GPIO->OUTSET = (1 << PIN_SD);
+  NRF_GPIO->OUTSET = (1 << PIN_SD);
   
-  tmo = 170000 * 100 ;
+  tmo = 1700000 * 100 ;
   while (tmo-- ) ;
   
   max9850_debug_print();
   // Enable amplifier 
   i2c_write(REG_ENABLE, 0xFF);
-  tmo = 10000 ; while (tmo-- ) ;
+  tmo = 100000 ; while (tmo-- ) ;
   
   i2c_write(REG_VOLUME, 0x4E);
-  tmo = 10000 ; while (tmo-- ) ;
+  tmo = 100000 ; while (tmo-- ) ;
   
   i2c_write(REG_LRCLK_MSB, 0x80);
-  tmo = 10000 ; while (tmo-- ) ;
+  tmo = 100000 ; while (tmo-- ) ;
   
   i2c_write(REG_LRCLK_LSB, 0x04);
-  tmo = 10000 ; while (tmo-- ) ;
+  tmo = 100000 ; while (tmo-- ) ;
   
   i2c_write(REG_DIGITAL_AUDIO, 0x08);
-  tmo = 10000 ; while (tmo-- ) ;
+  tmo = 100000 ; while (tmo-- ) ;
   
   max9850_debug_print();
-  
-  //i2c_write(REG_RESET_POWER_CTRL, 0x00);
-  //tmo = 10000 ; while (tmo-- ) ;
-      
+        
   //i2c_write(REG_VOLUME_AND_MUTE_CONTROL, 0x80 | (0 << 2));
   
   //i2c_write(REG_EDGE_CLOCK_CONTROL, 0x01);

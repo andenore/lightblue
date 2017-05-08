@@ -111,7 +111,7 @@ void I2S_IRQHandler(void)
   volatile uint32_t dumb;
   if (NRF_I2S->EVENTS_TXPTRUPD != 0)
   {
-    printf("i2s_txptrupd\n");
+    // printf("i2s_txptrupd\n");
     NRF_I2S->EVENTS_TXPTRUPD = 0;
     dumb = NRF_I2S->EVENTS_TXPTRUPD;
     txptrupd = 1;

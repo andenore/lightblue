@@ -56,10 +56,11 @@ link_directories(
 add_definitions(
   "-DNRF52"
   "-DNRF52832_XXAA"
-  "-D__HEAP_SIZE=16384"
+  "-D__HEAP_SIZE=17384"
+  "-D__STACK_SIZE=4092"
   )
 
-file( GLOB APP_SOURCES src/adv_test.c src/main.c src/jitter_test.c src/stream_test_tx.c src/stream_test_rx.c src/codec_test.c src/pdm_stream_tx.c  src/pdm_stream_rx.c)
+file( GLOB APP_SOURCES src/adv_test.c src/main.c src/jitter_test.c src/stream_test_tx.c src/stream_test_rx.c src/codec_test.c src/pdm_stream_tx.c  src/pdm_stream_rx.c src/pdm_i2s_test.c)
 foreach( testsourcefile ${APP_SOURCES} )
     # I used a simple string replace, to cut off .cpp.
     #string( REPLACE ".c" "" testname ${testsourcefile} )

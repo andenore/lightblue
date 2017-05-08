@@ -108,6 +108,17 @@ bool stream_q_full(void)
 	return (next == m_stream_q.head);
 }
 
+
+void stream_packet_print(stream_data_t *p_data)
+{
+	printf("Len = %d,  timestamp = %d\n", p_data->len, p_data->timestamp);
+	printf("Data = ");
+	for (int i=0; i < p_data->len; i++) {
+		printf("%02x", p_data->buf[i]);
+	}
+	printf("\n");
+}
+
 static void channel_set(uint32_t channel)
 {
 	switch (channel) {
@@ -165,7 +176,7 @@ void m_stream_tx_handler(uint32_t state)
 				m_pdu.len = p_stream_data->len;
 				memcpy(&m_pdu.payload.data[0], &p_stream_data->buf[0], p_stream_data->len);
 
-				printf("send: 0x%02x %d\n", m_pdu.payload.data[0], m_pdu.len);
+				// printf("send: 0x%02x %d\n", m_pdu.payload.data[0], m_pdu.len);
 
 				/* dequeue */
 				(void)stream_q_get();
@@ -220,7 +231,7 @@ void m_stream_rx_handler(uint32_t state)
 			hal_radio_access_address_set((uint8_t *)&aa);
 			hal_radio_crc_configure(((0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16)), M_STREAM_CRC_INIT);
 			hal_radio_packetptr_set((uint8_t *)&m_pdu);
-			radio_timer_timeout_set(3000);
+			radio_timer_timeout_set(5000);
 			hal_radio_disable_on_tmo_evt_set();
 
 			hal_radio_start_rx_on_start_evt();

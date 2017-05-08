@@ -34,17 +34,18 @@ static opus_uint32 char_to_int(unsigned char ch[4])
 #define FRAME_LENGTH_MS (10)
 #define SAMPLE_RATE_HZ  (16000)
 #define APPLICATION     (OPUS_APPLICATION_RESTRICTED_LOWDELAY)
-#define BITRATE         (64)
+#define BITRATE         (128)
 #define COMPLEXITY      (5)
 
 #define CHANNELS (2)
 #define MAX_FRAME_SIZE ((SAMPLE_RATE_HZ*FRAME_LENGTH_MS)/1000)
 
-static uint8_t codec_buf[17220];
+OpusCustomEncoder *enc;
+OpusCustomDecoder *dec;
 
-void codec_wrapper_init(void)
+void encoder_wrapper_init(uint8_t *codec_buf, uint8_t buf_length)
 {
-  OpusCustomEncoder *enc = (OpusCustomEncoder *)&codec_buf;
+  enc = (OpusCustomEncoder *)codec_buf;
   OpusCustomMode *custom_mode;
   bool decode_only = false;
   bool encode_only = true;
@@ -68,7 +69,7 @@ void codec_wrapper_init(void)
   }
   
   volatile int size = opus_custom_encoder_get_size(custom_mode, channels);
-  if (size > sizeof(codec_buf))
+  if (size > buf_length)
   {
     printf("Not enough memory, required = %d\n", size);
     ASSERT(false);
@@ -95,9 +96,9 @@ void codec_wrapper_init(void)
   opus_encoder_ctl(enc, OPUS_SET_EXPERT_FRAME_DURATION(variable_duration));*/
 }
 
-void decoder_wrapper_init(void)
+void decoder_wrapper_init(uint8_t *codec_buf, uint8_t buf_length)
 {
-  OpusCustomDecoder *dec = (OpusCustomDecoder *)&codec_buf;
+  dec = (OpusCustomDecoder *)codec_buf;
   OpusCustomMode *custom_mode;
   opus_int32 sampling_rate = SAMPLE_RATE_HZ;
   int channels = CHANNELS;
@@ -119,9 +120,9 @@ void decoder_wrapper_init(void)
   }
   
   volatile int size = opus_custom_decoder_get_size(custom_mode, channels);
-  if (size > sizeof(codec_buf))
+  if (size > buf_length)
   {
-    printf("Not enough memory, required = %d\n", size);
+    printf("Not enough memory, required = %d, got = %d\n", size, buf_length);
     ASSERT(false);
   }
   
@@ -148,18 +149,16 @@ void decoder_wrapper_init(void)
 
 int codec_wrapper_decode(const unsigned char *data, int len, opus_int16 *pcm, int frame_size)
 {
-  OpusCustomDecoder *enc = (OpusCustomDecoder *)&codec_buf;
-  int err_code = opus_custom_decode(enc, data, len, pcm, frame_size);
-  ASSERT (err_code >= 0);
+  int err_code = opus_custom_decode(dec, data, len, pcm, frame_size);
+  //ASSERT (err_code >= 0);
 
   return err_code;
 }
 
 int codec_wrapper_encode(const opus_int16 *pcm, unsigned char *compressed, int maxCompressedBytes)
 {
-  OpusCustomEncoder *enc = (OpusCustomEncoder *)&codec_buf;
   int err_code = opus_custom_encode(enc, pcm, MAX_FRAME_SIZE, compressed, maxCompressedBytes);
-  ASSERT (err_code >= 0);
+  // ASSERT (err_code >= 0);
 
   return err_code;
 }

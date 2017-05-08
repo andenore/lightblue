@@ -27,7 +27,7 @@ void i2c_init(uint8_t device_address, uint32_t pin_scl, uint32_t pin_sda)
 
 void i2c_write(uint8_t addr, uint8_t data)
 {
-  uint8_t tx_buf[2];
+  volatile uint8_t tx_buf[2];
   NRF_TWIM->SHORTS = TWIM_SHORTS_LASTTX_STOP_Msk;
   
   tx_buf[0] = addr;
@@ -42,8 +42,8 @@ void i2c_write(uint8_t addr, uint8_t data)
 
 uint8_t i2c_read(uint8_t addr)
 {
-  uint8_t tx_buf[1];
-  uint8_t rx_buf[1];
+  volatile uint8_t tx_buf[1];
+  volatile uint8_t rx_buf[1];
   NRF_TWIM->SHORTS = TWIM_SHORTS_LASTTX_STARTRX_Msk | TWIM_SHORTS_LASTRX_STOP_Msk;
   
   tx_buf[0] = addr;
