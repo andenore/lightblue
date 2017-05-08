@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2017 Anders Nore
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __EVENT_Q_H
 #define __EVENT_Q_H
 

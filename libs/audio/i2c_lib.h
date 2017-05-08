@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2017 Anders Nore
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __I2C_LIB_H
 #define __I2C_LIB_H
 

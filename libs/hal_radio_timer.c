@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2017 Anders Nore
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "hal_radio_timer.h"
 
 static volatile NRF_RTC_Type *RTC = (NRF_RTC_Type *)NRF_RTC0_BASE;

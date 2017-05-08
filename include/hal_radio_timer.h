@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2017 Anders Nore
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __RTC_HAL_H
 #define __RTC_HAL_H
 

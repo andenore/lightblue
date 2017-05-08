@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2017 Anders Nore
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <nrf.h>
 #include <stdint.h>

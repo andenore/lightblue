@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2017 Anders Nore
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __RADIO_TIMER_H
 #define __RADIO_TIMER_H
 
