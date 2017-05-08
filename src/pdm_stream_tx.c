@@ -48,6 +48,7 @@ uint8_t m_enc_buf[8964];
 int main(int argc, char *argv[])
 {
   int compressed_length;
+  uint32_t pdm_end_t0, radio_addr_t0;
   printf("Starting PDM TX stream...\n");
 
   DEBUG_INIT();
@@ -57,7 +58,6 @@ int main(int argc, char *argv[])
   while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
 
   memset(&data, 0, sizeof(data));
-  data.len = 255;
 
   encoder_wrapper_init(m_enc_buf, sizeof(m_enc_buf));
   stream_tx_start();
@@ -68,25 +68,31 @@ int main(int argc, char *argv[])
   mic_start();
 
   NRF_TIMER2->PRESCALER = 4;
+  NRF_TIMER2->BITMODE = TIMER_BITMODE_BITMODE_32Bit << TIMER_BITMODE_BITMODE_Pos;
   NRF_TIMER2->TASKS_START = 1;
+
+  NRF_PPI->CH[0].TEP = (uint32_t)&NRF_TIMER2->TASKS_CAPTURE[0];
+  NRF_PPI->CH[0].EEP = (uint32_t)&NRF_PDM->EVENTS_END;
+  NRF_PPI->CH[1].TEP = (uint32_t)&NRF_TIMER2->TASKS_CAPTURE[1];
+  NRF_PPI->CH[1].EEP = (uint32_t)&NRF_RADIO->EVENTS_ADDRESS;
+  NRF_PPI->CHENSET = 3;
+
 
   while (1)
   {
-    if (mic_rxptr_upd()) {
-      
-      NRF_TIMER2->TASKS_CAPTURE[0] = 1;
-      NRF_TIMER2->TASKS_CLEAR = 1;
-      printf("time diff: %d\n", NRF_TIMER2->CC[0]);
+    if (mic_rxptr_upd()) 
+    {
+
+      // printf("time diff: %d %d\n", NRF_TIMER2->CC[0] - pdm_end_t0, NRF_TIMER2->CC[1] - radio_addr_t0);
+      pdm_end_t0 = NRF_TIMER2->CC[0];
+      radio_addr_t0 = NRF_TIMER2->CC[1];
 
       pdm_buf_sel ^= 0x1;
       mic_rxptr_cfg(&pdm_samples[pdm_buf_sel][0], NUM_SAMPLES*4);
-
-
     }
 
-    if (mic_events_end()) {
-      
-      // NRF_TIMER2->TASKS_CLEAR = 1;
+    if (mic_events_end()) 
+    {
       compressed_length = codec_wrapper_encode(&pdm_samples[pdm_buf_sel ^ 0x1][0], out, sizeof(out));
       memcpy(&data.buf[0], &out[0], compressed_length);
       data.len = compressed_length;
@@ -100,13 +106,6 @@ int main(int argc, char *argv[])
         printf("overrun\n");
         //ASSERT(false);
       }
-
-      // NRF_TIMER2->TASKS_CAPTURE[0] = 1;
-
-      // printf("encoded pkt in %d us\n", NRF_TIMER2->CC[0]);
-      // if (NRF_TIMER2->CC[0] > 10000) {
-      //   ASSERT(false);
-      // }
     }
     
     __WFE();

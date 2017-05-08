@@ -111,11 +111,11 @@ int main(int argc, char *argv[])
       {
         printf("Buffer underrun or packet lost\n");
         m_received_pkts = 0;
-        // frame_size = codec_wrapper_decode(NULL, 0, &m_stream[i2s_stream_sel][0], NUM_SAMPLES);
-        // if (frame_size <= 0)
-        // {
-        //   printf("codec_wrapper_decode Err_code = %d\n", frame_size);
-        // }
+        frame_size = codec_wrapper_decode(NULL, 0, &m_stream[i2s_stream_sel][0], NUM_SAMPLES);
+        if (frame_size <= 0)
+        {
+          printf("codec_wrapper_decode Err_code = %d\n", frame_size);
+        }
 
       }
 
@@ -128,26 +128,10 @@ int main(int argc, char *argv[])
       got_packet = 0;
       m_received_pkts++;
       printf("recv_pkts = %d\n", m_received_pkts);
-
-      // stream_data_t *p_data = stream_q_head_peek();
-      // stream_packet_print(p_data);
-      // m_cumulative_error += p_data->timestamp;
-      // printf("Got new packet 0x%02x %d %d\n", p_data->buf[0], p_data->timestamp, (int)m_cumulative_error);
-
-      
-      // NRF_TIMER2->TASKS_CLEAR = 1;
-      // frame_size = codec_wrapper_decode(p_data->buf[0], p_data->len, &m_stream[upd_stream_sel][0], NUM_SAMPLES);
-      // NRF_TIMER2->TASKS_CAPTURE[0] = 1;
-      // printf("Decoded frame, len = %d, size = %d, time = %d\n",p_data->len, frame_size, NRF_TIMER2->CC[0]);
-
-      // (void)stream_q_get();
     }
 
     __WFE();
-
   }
-
-  i2s_stop();
 
   return 0;
 }
@@ -155,5 +139,4 @@ int main(int argc, char *argv[])
 void STREAM_EVENT_IRQHandler(void)
 {
   got_packet = 1;
-  // printf("got packet\n");
 }

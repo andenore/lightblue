@@ -10,6 +10,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define HAL_RADIO_RXEN_TO_READY_US (150)
+#define HAL_RADIO_AA_AND_ADDR_LEN_US (8*5)
+
 void hal_radio_init(void);
 void hal_radio_pkt_configure(uint8_t preamble16, uint8_t bits_len, uint8_t max_len);
 

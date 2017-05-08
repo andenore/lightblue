@@ -17,9 +17,14 @@
 #include <stream.h>
 #include "SEGGER_RTT.h"
 
-#define M_STREAM_ACCESS_ADDR (0x8E89BED6)
-#define M_STREAM_CRC_INIT (0x00555555)
-#define M_STREAM_Q_NUM (8)
+#define M_TIMING_ACCURACY_PPM		(500)
+#define M_MISSED_EVENTS_MAX 		(5)
+#define M_CONN_INTERVAL_US 			(10000)
+#define M_CONN_INTERVAL_MARGIN	((M_TIMING_ACCURACY_PPM * M_CONN_INTERVAL_US) / 1000000)
+
+#define M_STREAM_ACCESS_ADDR 	(0x8E89BED6)
+#define M_STREAM_CRC_INIT 		(0x00555555)
+#define M_STREAM_Q_NUM 				(8)
 
 /** Local functions */
 static void m_stream_rx_pkt(void);
@@ -27,13 +32,25 @@ static void m_stream_rx_pkt(void);
 static radio_timer_t m_stream_timer;
 static struct pdu_stream m_pdu;
 
+typedef enum {
+	STREAM_RX_STATE_SCANNING = 0,
+	STREAM_RX_STATE_CONNECTED,
+} m_stream_rx_state_t;
+
+typedef struct {
+	m_stream_rx_state_t state;
+	uint8_t missed_event_counter;
+} m_stream_rx_t;
+
 typedef struct {
 	stream_data_t data[M_STREAM_Q_NUM];
 	volatile uint32_t head;
 	volatile uint32_t tail;
 } m_stream_q_t;
 
-m_stream_q_t m_stream_q;
+
+static m_stream_rx_t m_stream_rx;
+static m_stream_q_t m_stream_q;
 
 void m_stream_q_init(void)
 {
@@ -203,7 +220,7 @@ void m_stream_tx_handler(uint32_t state)
 			break;
 
 		case RADIO_TIMER_SIG_RADIO:
-			m_stream_timer.start_us += 10000;
+			m_stream_timer.start_us += M_CONN_INTERVAL_US;
 			m_stream_timer.func = m_stream_tx_handler;
 
 			err = radio_timer_req(&m_stream_timer);
@@ -222,9 +239,6 @@ void m_stream_rx_handler(uint32_t state)
 	uint32_t err;
 	uint32_t aa = M_STREAM_ACCESS_ADDR;
 	int32_t start_to_address_time;
-	static int32_t cumulative_start_to_address_time = 0;
-
-	// stream_data_t *p_pdu = NULL;
 
 	switch (state)
 	{
@@ -246,9 +260,6 @@ void m_stream_rx_handler(uint32_t state)
 
 		case RADIO_TIMER_SIG_START:
 			DEBUG_TOGGLE(0);
-			// printf("start\n");
-
-			// debug_print();
 			
 			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
 			
@@ -256,10 +267,27 @@ void m_stream_rx_handler(uint32_t state)
 
 		case RADIO_TIMER_SIG_TIMEOUT:
 			DEBUG_TOGGLE(1);
-			// printf("timeout\n");
+			printf("packet loss\n");
 
-			m_stream_timer.start_us += 11000;
-			m_stream_timer.func = m_stream_rx_handler;
+			if (m_stream_rx.state == STREAM_RX_STATE_CONNECTED)
+			{
+				m_stream_rx.missed_event_counter++;
+			}
+
+			if (m_stream_rx.missed_event_counter > M_MISSED_EVENTS_MAX) {
+				m_stream_rx.state = STREAM_RX_STATE_SCANNING;
+				printf("Lost connection\n");
+			}
+
+
+			if (m_stream_rx.state == STREAM_RX_STATE_CONNECTED)
+			{
+				m_stream_timer.start_us += M_CONN_INTERVAL_US - M_CONN_INTERVAL_MARGIN;
+			}
+			else
+			{
+				m_stream_timer.start_us += M_CONN_INTERVAL_US + 1000; /* todo add pseudo random part*/
+			}
 
 			err = radio_timer_req(&m_stream_timer);
 			ASSERT(err == 0);
@@ -269,12 +297,12 @@ void m_stream_rx_handler(uint32_t state)
 
 		case RADIO_TIMER_SIG_RADIO:
 			// printf("radio\n");
+			m_stream_rx.state = STREAM_RX_STATE_CONNECTED;
+			m_stream_rx.missed_event_counter = 0;
 			m_stream_rx_pkt();
 
 			start_to_address_time = hal_radio_start_to_address_time_get();
-			cumulative_start_to_address_time += start_to_address_time - 200;
-			// printf("start-to-addr: %d  cumulative: %d\n", (int)start_to_address_time, (int)cumulative_start_to_address_time);
-			m_stream_timer.start_us += 10000 + start_to_address_time - 200;
+			m_stream_timer.start_us += M_CONN_INTERVAL_US + start_to_address_time - M_CONN_INTERVAL_MARGIN - HAL_RADIO_RXEN_TO_READY_US - HAL_RADIO_AA_AND_ADDR_LEN_US;
 			m_stream_timer.func = m_stream_rx_handler;
 
 			err = radio_timer_req(&m_stream_timer);
@@ -299,10 +327,8 @@ static void m_stream_rx_pkt(void)
 			stream_data_t *p_data = stream_q_tail_peek();
 			p_data->len = m_pdu.len;
 			memcpy(&p_data->buf[0], &m_pdu.payload.data[0], m_pdu.len);
-			p_data->timestamp = hal_radio_start_to_address_time_get() - 200;
+			p_data->timestamp = hal_radio_start_to_address_time_get() - M_CONN_INTERVAL_MARGIN - HAL_RADIO_RXEN_TO_READY_US - HAL_RADIO_AA_AND_ADDR_LEN_US;
 			stream_q_put(NULL);
-			// printf("Got packet: %d", m_pdu.payload.data[0]);
-			/**@todo notify of packet reception */
 
 			NVIC_SetPendingIRQ(STREAM_EVENT_IRQn);
 		}
@@ -311,8 +337,6 @@ static void m_stream_rx_pkt(void)
 	{
 		/** nothing... */
 	}
-
-
 }
 
 void stream_tx_start(void)
@@ -336,6 +360,8 @@ void stream_rx_start(void)
 	uint32_t err;
 
 	m_stream_q_init();
+	m_stream_rx.state = STREAM_RX_STATE_SCANNING;
+	m_stream_rx.missed_event_counter = 0;
 
 	radio_timer_init();
 
