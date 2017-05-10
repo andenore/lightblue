@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <stdio.h>
+#include "hal_radio.h"
 #include "hal_radio_timer.h"
 
 #define M_PPICH_TIMER0_CC1_TO_RADIO_DISABLE 		(22)
