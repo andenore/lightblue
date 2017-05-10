@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
 
 	memset(&data, 0, sizeof(data));
-	data.len = 255;
+	data.len = M_STREAM_DATA_LEN;
 
 	stream_tx_start();
 

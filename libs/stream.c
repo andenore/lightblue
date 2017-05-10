@@ -20,11 +20,12 @@
 #define M_TIMING_ACCURACY_PPM		(500)
 #define M_MISSED_EVENTS_MAX 		(5)
 #define M_CONN_INTERVAL_US 			(10000)
-#define M_CONN_INTERVAL_MARGIN	((M_TIMING_ACCURACY_PPM * M_CONN_INTERVAL_US) / 1000000)
 
 #define M_STREAM_ACCESS_ADDR 	(0x8E89BED6)
 #define M_STREAM_CRC_INIT 		(0x00555555)
 #define M_STREAM_Q_NUM 				(8)
+
+#define M_RADIO_MODE (RADIO_MODE_MODE_Nrf_250Kbit)
 
 /** Local functions */
 static void m_stream_rx_pkt(void);
@@ -184,7 +185,7 @@ void m_stream_tx_handler(uint32_t state)
 		case RADIO_TIMER_SIG_PREPARE:
 			// DEBUG_TOGGLE(0);
 			// printf("prepare\n");
-			hal_radio_init();
+			hal_radio_init(M_RADIO_MODE);
 			hal_radio_pkt_configure(0, M_STREAM_PKT_LEN_BITS, M_STREAM_DATA_LEN);
 			channel_set(15);
 			hal_radio_access_address_set((uint8_t *)&aa);
@@ -237,6 +238,12 @@ void m_stream_tx_handler(uint32_t state)
 	}
 }
 
+/**@todo improve drift compensation, make it more accurate */
+static uint32_t m_stream_drift_compensation_us(uint32_t interval)
+{
+	return ((M_TIMING_ACCURACY_PPM * interval) >> 20); /* dividing by 1048576, off by -5% */
+}
+
 void m_stream_rx_handler(uint32_t state)
 {
 	uint32_t err;
@@ -249,7 +256,7 @@ void m_stream_rx_handler(uint32_t state)
 			// NRF_TIMER3->TASKS_CLEAR = 1;
 			// printf("prepare\n");
 
-			hal_radio_init();
+			hal_radio_init(M_RADIO_MODE);
 			hal_radio_pkt_configure(0, M_STREAM_PKT_LEN_BITS, M_STREAM_DATA_LEN);
 			channel_set(15);
 			hal_radio_access_address_set((uint8_t *)&aa);
@@ -288,7 +295,7 @@ void m_stream_rx_handler(uint32_t state)
 
 			if (m_stream_rx.state == STREAM_RX_STATE_CONNECTED)
 			{
-				m_stream_timer.start_us += M_CONN_INTERVAL_US - M_CONN_INTERVAL_MARGIN;
+				m_stream_timer.start_us += M_CONN_INTERVAL_US - m_stream_drift_compensation_us(M_CONN_INTERVAL_US);
 			}
 			else
 			{
@@ -326,7 +333,7 @@ void m_stream_rx_handler(uint32_t state)
 			m_stream_rx_pkt();
 
 			start_to_address_time = hal_radio_start_to_address_time_get();
-			m_stream_timer.start_us += M_CONN_INTERVAL_US + start_to_address_time - M_CONN_INTERVAL_MARGIN - HAL_RADIO_RXEN_TO_READY_US - HAL_RADIO_AA_AND_ADDR_LEN_US;
+			m_stream_timer.start_us += M_CONN_INTERVAL_US + start_to_address_time - m_stream_drift_compensation_us(M_CONN_INTERVAL_US) - HAL_RADIO_RXEN_TO_READY_US - hal_radio_header_len_us(M_RADIO_MODE, 0);
 			m_stream_timer.func = m_stream_rx_handler;
 
 			// printf("scheduled = %d, start_to_addr_time = %d\n", m_stream_timer.start_us, start_to_address_time);
@@ -356,7 +363,7 @@ static void m_stream_rx_pkt(void)
 			ASSERT(m_pdu.len <= M_STREAM_DATA_LEN);
 			p_data->len = m_pdu.len;
 			memcpy(&p_data->buf[0], &m_pdu.payload.data[0], m_pdu.len);
-			p_data->timestamp = hal_radio_start_to_address_time_get() - M_CONN_INTERVAL_MARGIN - HAL_RADIO_RXEN_TO_READY_US - HAL_RADIO_AA_AND_ADDR_LEN_US;
+			p_data->timestamp = hal_radio_start_to_address_time_get() - m_stream_drift_compensation_us(M_CONN_INTERVAL_US) - HAL_RADIO_RXEN_TO_READY_US - hal_radio_header_len_us(M_RADIO_MODE, 0);
 
 			printf("stream_q_put\n");
 			stream_q_put(NULL);

@@ -17,7 +17,8 @@
 #include "SEGGER_RTT.h"
 
 #define M_ADV_ACCESS_ADDR (0x8E89BED6)
-#define M_ADV_CRC_INIT (0x00555555)
+#define M_ADV_CRC_INIT 		(0x00555555)
+#define M_RADIO_MODE 			(RADIO_MODE_MODE_Ble_1Mbit)
 
 static radio_timer_t m_adv_timer;
 static struct pdu_adv *adv_pdu;
@@ -63,7 +64,7 @@ void m_adv_timeout_handler(uint32_t state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
 			printf("prepare\n");
-			hal_radio_init();
+			hal_radio_init(M_RADIO_MODE);
 			hal_radio_pkt_configure(0, 6, 37);
 			channel_set(37);
 			hal_radio_access_address_set((uint8_t *)&aa);

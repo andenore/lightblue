@@ -16,11 +16,17 @@
 #define M_PPICH_TIMER0_CC0_TO_RADIO_TXEN 				(20)
 #define M_PPICH_RADIO_ADDRESS_TO_TIMER_CAPTURE1 (26)
 
-void hal_radio_init(void)
+#define ACCESS_ADDR_NUM_BITS 	(4*8)
+#define S0_NUM_BITS 					(8)
+#define LEN_NUM_BITS 					(8)	/* len + s1 is always 8 bits*/
+#define BITS_IN_HEADER 				(ACCESS_ADDR_NUM_BITS + S0_NUM_BITS + LEN_NUM_BITS)
+
+void hal_radio_init(uint32_t radio_mode)
 {
 	ASSERT(NRF_RADIO->STATE == (RADIO_STATE_STATE_Disabled << RADIO_STATE_STATE_Pos));
+	ASSERT(radio_mode == RADIO_MODE_MODE_Nrf_250Kbit || radio_mode == RADIO_MODE_MODE_Ble_1Mbit || radio_mode == RADIO_MODE_MODE_Nrf_2Mbit)
 
-	NRF_RADIO->MODE = HAL_RADIO_MODE << RADIO_MODE_MODE_Pos;
+	NRF_RADIO->MODE = radio_mode << RADIO_MODE_MODE_Pos;
 
 	//x 24 + x 10 + x 9 + x 6 + x 4 + x 3 + x + 1
 	// NRF_RADIO->CRCPOLY = (0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16);
@@ -67,6 +73,42 @@ void hal_radio_pkt_configure(uint8_t preamble16, uint8_t bits_len, uint8_t max_l
 			      RADIO_PCNF1_ENDIAN_Msk) |
 			     (((1UL) << RADIO_PCNF1_WHITEEN_Pos) &
 			       RADIO_PCNF1_WHITEEN_Msk));
+}
+
+uint32_t hal_radio_header_len_us(uint32_t radio_mode, uint8_t preamble16)
+{
+	uint32_t preamble_bits = (preamble16 == 1 ? 16 : 8);
+	switch (radio_mode) 
+	{
+		case RADIO_MODE_MODE_Nrf_250Kbit:
+			return 4 * (BITS_IN_HEADER + preamble_bits);
+			break;
+		case RADIO_MODE_MODE_Ble_1Mbit:
+			return (BITS_IN_HEADER + preamble_bits);
+			break;
+		case RADIO_MODE_MODE_Nrf_2Mbit:
+			return ((BITS_IN_HEADER + preamble_bits) + 1) >> 2;
+			break;
+		default:
+			ASSERT(false);
+			break;
+	}
+}
+
+uint32_t hal_radio_packet_len_us(uint32_t radio_mode, uint32_t packet_len)
+{
+	switch (radio_mode) 
+	{
+		case RADIO_MODE_MODE_Nrf_250Kbit:
+			return 4 * packet_len;
+			break;
+		case RADIO_MODE_MODE_Ble_1Mbit:
+			return packet_len;
+			break;
+		case RADIO_MODE_MODE_Nrf_2Mbit:
+			return (packet_len + 1) >> 2;
+			break;
+	}
 }
 
 void hal_radio_packetptr_set(uint8_t *buf)
