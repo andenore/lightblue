@@ -246,8 +246,8 @@ void m_stream_rx_handler(uint32_t state)
 	switch (state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
-			NRF_TIMER3->TASKS_CLEAR = 1;
-			printf("prepare\n");
+			// NRF_TIMER3->TASKS_CLEAR = 1;
+			// printf("prepare\n");
 
 			hal_radio_init();
 			hal_radio_pkt_configure(0, M_STREAM_PKT_LEN_BITS, M_STREAM_DATA_LEN);
@@ -295,14 +295,12 @@ void m_stream_rx_handler(uint32_t state)
 				m_stream_timer.start_us += M_CONN_INTERVAL_US + 1000; /* todo add pseudo random part*/
 			}
 
-			printf("req\n");
 			err = radio_timer_req(&m_stream_timer);
 			ASSERT(err == 0);
 
 			// printf("scheduled = %d, start_to_addr_time = %d, packet loss\n", m_stream_timer.start_us, 0);
 
 			/* propagate empty packet */
-			printf("stream_q_full\n");
 			if (!stream_q_full())
 			{
 				stream_data_t *p_data = stream_q_tail_peek();
@@ -315,14 +313,14 @@ void m_stream_rx_handler(uint32_t state)
 
 			radio_timer_sig_end();
 
-			NRF_TIMER3->TASKS_CAPTURE[1] = 1;
-			printf("tostart = %d, totimeout = %d", NRF_TIMER3->CC[0], NRF_TIMER3->CC[1]);
+			// NRF_TIMER3->TASKS_CAPTURE[1] = 1;
+			// printf("tostart = %d, totimeout = %d", NRF_TIMER3->CC[0], NRF_TIMER3->CC[1]);
 			break;
 
 		case RADIO_TIMER_SIG_RADIO:
 			DEBUG_CLR(0);
 			DEBUG_SET(1);
-			printf("radio\n");
+			// printf("radio\n");
 			m_stream_rx.state = STREAM_RX_STATE_CONNECTED;
 			m_stream_rx.missed_event_counter = 0;
 			m_stream_rx_pkt();
@@ -337,8 +335,8 @@ void m_stream_rx_handler(uint32_t state)
 			ASSERT(err == 0);
 
 			radio_timer_sig_end();
-			NRF_TIMER3->TASKS_CAPTURE[1] = 1;
-			printf("tostart = %d, toradio = %d", NRF_TIMER3->CC[0], NRF_TIMER3->CC[1]);
+			// NRF_TIMER3->TASKS_CAPTURE[1] = 1;
+			// printf("tostart = %d, toradio = %d", NRF_TIMER3->CC[0], NRF_TIMER3->CC[1]);
 			break;
 
 		default:
@@ -392,8 +390,8 @@ void stream_rx_start(void)
 {
 	uint32_t err;
 
-	NRF_TIMER3->PRESCALER = 4;
-	NRF_TIMER3->TASKS_START = 1;
+	// NRF_TIMER3->PRESCALER = 4;
+	// NRF_TIMER3->TASKS_START = 1;
 
 	m_stream_q_init();
 	m_stream_rx.state = STREAM_RX_STATE_SCANNING;
