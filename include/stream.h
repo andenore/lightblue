@@ -9,14 +9,15 @@
 
 #include <stdbool.h>
 
-#define M_STREAM_DATA_LEN (255)
+#define M_STREAM_DATA_LEN     (127)
+#define M_STREAM_PKT_LEN_BITS (7)
 
 #define STREAM_EVENT_IRQn       (SWI5_EGU5_IRQn)
 #define STREAM_EVENT_IRQHandler (SWI5_EGU5_IRQHandler)
 
 typedef struct {
-  uint8_t len;
   uint8_t buf[M_STREAM_DATA_LEN];
+  uint8_t len;
   int8_t  timestamp;
 } stream_data_t;
 

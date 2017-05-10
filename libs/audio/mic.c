@@ -11,9 +11,12 @@
 #define MIC_DOUT     (4)
 #define MIC_CLK      (3)
 
+#define MAX_GAIN (0x50)
+#define MIN_GAIN (0x00)
 
 static uint32_t rxptrupd;
 static uint32_t events_end;
+static uint32_t m_gain = 0x50;
 
 void mic_init()
 {
@@ -44,8 +47,8 @@ void mic_init()
   NRF_PDM->PSEL.CLK = MIC_CLK;
   NRF_PDM->PSEL.DIN = MIC_DOUT;
   
-  NRF_PDM->GAINL = PDM_GAINL_GAINL_DefaultGain + 28;// << PDM_GAINL_GAINL_Pos;
-  NRF_PDM->GAINR = PDM_GAINR_GAINR_DefaultGain + 28;// << PDM_GAINR_GAINR_Pos;
+  NRF_PDM->GAINL = m_gain;
+  NRF_PDM->GAINR = m_gain;
   
   NRF_PDM->PDMCLKCTRL = PDM_PDMCLKCTRL_FREQ_Default << PDM_PDMCLKCTRL_FREQ_Pos;
   NRF_PDM->MODE = PDM_MODE_EDGE_LeftRising << PDM_MODE_EDGE_Pos |
@@ -57,6 +60,29 @@ void mic_init()
   NVIC_SetPriority(PDM_IRQn, 3);
   NVIC_EnableIRQ(PDM_IRQn);
 }
+
+void mic_gain_up(void)
+{
+  if (m_gain < MAX_GAIN)
+  {
+    m_gain++;
+    NRF_PDM->GAINL = m_gain;
+    NRF_PDM->GAINR = m_gain;
+  }
+  printf("m_gain = %02x", m_gain);
+}
+
+void mic_gain_down(void)
+{
+  if (m_gain > 0)
+  {
+    m_gain--;
+    NRF_PDM->GAINL = m_gain;
+    NRF_PDM->GAINR = m_gain;
+  }
+  printf("m_gain = %02x", m_gain);
+}
+
 
 void mic_start(void)
 {

@@ -16,7 +16,7 @@
 /* 10 ms of sound @ 16kHz */
 #define NUM_SAMPLES (160)
 
-#define MAX_COMPRESSED_SIZE (255)
+#define MAX_COMPRESSED_SIZE (M_STREAM_DATA_LEN)
 
 void assert_handler(char *buf, uint16_t line)
 {

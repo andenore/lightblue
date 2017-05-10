@@ -50,7 +50,7 @@ typedef struct {
 
 
 static m_stream_rx_t m_stream_rx;
-static m_stream_q_t m_stream_q;
+static volatile m_stream_q_t m_stream_q;
 
 void m_stream_q_init(void)
 {
@@ -59,7 +59,8 @@ void m_stream_q_init(void)
 
 int stream_q_put(stream_data_t *p_data)
 {
-	ASSERT(p_data->len <= M_STREAM_DATA_LEN);
+	if (p_data) ASSERT(p_data->len <= M_STREAM_DATA_LEN);
+	
 	uint32_t next = m_stream_q.tail + 1;
 	if (next == M_STREAM_Q_NUM)
 	{
@@ -181,10 +182,10 @@ void m_stream_tx_handler(uint32_t state)
 	switch (state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
-			DEBUG_TOGGLE(0);
+			// DEBUG_TOGGLE(0);
 			// printf("prepare\n");
 			hal_radio_init();
-			hal_radio_pkt_configure(0, 8, M_STREAM_DATA_LEN);
+			hal_radio_pkt_configure(0, M_STREAM_PKT_LEN_BITS, M_STREAM_DATA_LEN);
 			channel_set(15);
 			hal_radio_access_address_set((uint8_t *)&aa);
 			hal_radio_crc_configure(((0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16)), M_STREAM_CRC_INIT);
@@ -216,12 +217,14 @@ void m_stream_tx_handler(uint32_t state)
 			DEBUG_TOGGLE(1);
 			// printf("start\n");
 			
-			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
+			//ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
 			break;
 
 		case RADIO_TIMER_SIG_RADIO:
 			m_stream_timer.start_us += M_CONN_INTERVAL_US;
 			m_stream_timer.func = m_stream_tx_handler;
+
+			// printf("scheduled = %d, start_to_addr_time = %d\n", m_stream_timer.start_us, 0);
 
 			err = radio_timer_req(&m_stream_timer);
 			ASSERT(err == 0);
@@ -243,10 +246,11 @@ void m_stream_rx_handler(uint32_t state)
 	switch (state)
 	{
 		case RADIO_TIMER_SIG_PREPARE:
-			// printf("prepare\n");
+			NRF_TIMER3->TASKS_CLEAR = 1;
+			printf("prepare\n");
 
 			hal_radio_init();
-			hal_radio_pkt_configure(0, 8, M_STREAM_DATA_LEN);
+			hal_radio_pkt_configure(0, M_STREAM_PKT_LEN_BITS, M_STREAM_DATA_LEN);
 			channel_set(15);
 			hal_radio_access_address_set((uint8_t *)&aa);
 			hal_radio_crc_configure(((0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16)), M_STREAM_CRC_INIT);
@@ -259,14 +263,16 @@ void m_stream_rx_handler(uint32_t state)
 			break;
 
 		case RADIO_TIMER_SIG_START:
-			DEBUG_TOGGLE(0);
+			// DEBUG_TOGGLE(0);
+			NRF_TIMER3->TASKS_CAPTURE[0] = 1;
 			
 			ASSERT((NRF_CLOCK->HFCLKSTAT & (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk)) == (CLOCK_HFCLKSTAT_SRC_Msk | CLOCK_HFCLKSTAT_STATE_Msk));
 			
 			break;
 
 		case RADIO_TIMER_SIG_TIMEOUT:
-			DEBUG_TOGGLE(1);
+			DEBUG_CLR(1);
+			DEBUG_SET(0);
 			printf("packet loss\n");
 
 			if (m_stream_rx.state == STREAM_RX_STATE_CONNECTED)
@@ -276,7 +282,7 @@ void m_stream_rx_handler(uint32_t state)
 
 			if (m_stream_rx.missed_event_counter > M_MISSED_EVENTS_MAX) {
 				m_stream_rx.state = STREAM_RX_STATE_SCANNING;
-				printf("Lost connection\n");
+				// printf("Lost connection\n");
 			}
 
 
@@ -289,14 +295,34 @@ void m_stream_rx_handler(uint32_t state)
 				m_stream_timer.start_us += M_CONN_INTERVAL_US + 1000; /* todo add pseudo random part*/
 			}
 
+			printf("req\n");
 			err = radio_timer_req(&m_stream_timer);
 			ASSERT(err == 0);
 
+			// printf("scheduled = %d, start_to_addr_time = %d, packet loss\n", m_stream_timer.start_us, 0);
+
+			/* propagate empty packet */
+			printf("stream_q_full\n");
+			if (!stream_q_full())
+			{
+				stream_data_t *p_data = stream_q_tail_peek();
+				p_data->len = 0;
+				p_data->timestamp = 0;
+				stream_q_put(NULL);
+
+				NVIC_SetPendingIRQ(STREAM_EVENT_IRQn);
+			}
+
 			radio_timer_sig_end();
+
+			NRF_TIMER3->TASKS_CAPTURE[1] = 1;
+			printf("tostart = %d, totimeout = %d", NRF_TIMER3->CC[0], NRF_TIMER3->CC[1]);
 			break;
 
 		case RADIO_TIMER_SIG_RADIO:
-			// printf("radio\n");
+			DEBUG_CLR(0);
+			DEBUG_SET(1);
+			printf("radio\n");
 			m_stream_rx.state = STREAM_RX_STATE_CONNECTED;
 			m_stream_rx.missed_event_counter = 0;
 			m_stream_rx_pkt();
@@ -305,10 +331,14 @@ void m_stream_rx_handler(uint32_t state)
 			m_stream_timer.start_us += M_CONN_INTERVAL_US + start_to_address_time - M_CONN_INTERVAL_MARGIN - HAL_RADIO_RXEN_TO_READY_US - HAL_RADIO_AA_AND_ADDR_LEN_US;
 			m_stream_timer.func = m_stream_rx_handler;
 
+			// printf("scheduled = %d, start_to_addr_time = %d\n", m_stream_timer.start_us, start_to_address_time);
+
 			err = radio_timer_req(&m_stream_timer);
 			ASSERT(err == 0);
 
 			radio_timer_sig_end();
+			NRF_TIMER3->TASKS_CAPTURE[1] = 1;
+			printf("tostart = %d, toradio = %d", NRF_TIMER3->CC[0], NRF_TIMER3->CC[1]);
 			break;
 
 		default:
@@ -325,9 +355,12 @@ static void m_stream_rx_pkt(void)
 		if (!stream_q_full())
 		{
 			stream_data_t *p_data = stream_q_tail_peek();
+			ASSERT(m_pdu.len <= M_STREAM_DATA_LEN);
 			p_data->len = m_pdu.len;
 			memcpy(&p_data->buf[0], &m_pdu.payload.data[0], m_pdu.len);
 			p_data->timestamp = hal_radio_start_to_address_time_get() - M_CONN_INTERVAL_MARGIN - HAL_RADIO_RXEN_TO_READY_US - HAL_RADIO_AA_AND_ADDR_LEN_US;
+
+			printf("stream_q_put\n");
 			stream_q_put(NULL);
 
 			NVIC_SetPendingIRQ(STREAM_EVENT_IRQn);
@@ -358,6 +391,9 @@ void stream_tx_start(void)
 void stream_rx_start(void)
 {
 	uint32_t err;
+
+	NRF_TIMER3->PRESCALER = 4;
+	NRF_TIMER3->TASKS_START = 1;
 
 	m_stream_q_init();
 	m_stream_rx.state = STREAM_RX_STATE_SCANNING;

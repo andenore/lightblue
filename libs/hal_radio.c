@@ -19,7 +19,7 @@ void hal_radio_init(void)
 {
 	ASSERT(NRF_RADIO->STATE == (RADIO_STATE_STATE_Disabled << RADIO_STATE_STATE_Pos));
 
-	NRF_RADIO->MODE = RADIO_MODE_MODE_Ble_1Mbit << RADIO_MODE_MODE_Pos;
+	NRF_RADIO->MODE = HAL_RADIO_MODE << RADIO_MODE_MODE_Pos;
 
 	//x 24 + x 10 + x 9 + x 6 + x 4 + x 3 + x + 1
 	// NRF_RADIO->CRCPOLY = (0x5bUL) | ((0x06UL) << 8) | ((0x00UL) << 16);

@@ -16,11 +16,16 @@
 /* 10 ms of sound @ 16kHz */
 #define NUM_SAMPLES (160)
 
-#define MAX_COMPRESSED_SIZE (255)
+#define MAX_COMPRESSED_SIZE (M_STREAM_DATA_LEN)
+
+#define BUTTON_VOLUME_UP    (12)
+#define BUTTON_VOLUME_DOWN  (2)
 
 void assert_handler(char *buf, uint16_t line)
 {
-  DEBUG_SET(3);
+  DEBUG_CLR(0);
+  DEBUG_CLR(1);
+  DEBUG_SET(2);
 
   printf("Assertion %s @ %d\n", buf, line);
 
@@ -31,7 +36,7 @@ void assert_handler(char *buf, uint16_t line)
 
 void HardFault_Handler(void)
 {
-  DEBUG_SET(3);
+  DEBUG_SET(2);
   printf("HardFault_Handler...\n");
   while (1);
 }
@@ -43,6 +48,41 @@ uint32_t m_received_pkts = 0;
 
 uint8_t m_dec_buf[17224];
 
+void button_cfg(void)
+{
+  NRF_GPIO->PIN_CNF[BUTTON_VOLUME_UP] = 
+                          GPIO_PIN_CNF_DIR_Input     << GPIO_PIN_CNF_DIR_Pos |
+                          GPIO_PIN_CNF_DRIVE_S0S1    << GPIO_PIN_CNF_DRIVE_Pos |
+                          GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos | 
+                          GPIO_PIN_CNF_PULL_Pullup   << GPIO_PIN_CNF_PULL_Pos | 
+                          GPIO_PIN_CNF_SENSE_Low     << GPIO_PIN_CNF_SENSE_Pos;
+  
+  NRF_GPIO->PIN_CNF[BUTTON_VOLUME_DOWN] = 
+                          GPIO_PIN_CNF_DIR_Input     << GPIO_PIN_CNF_DIR_Pos |
+                          GPIO_PIN_CNF_DRIVE_S0S1    << GPIO_PIN_CNF_DRIVE_Pos |
+                          GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos | 
+                          GPIO_PIN_CNF_PULL_Pullup   << GPIO_PIN_CNF_PULL_Pos | 
+                          GPIO_PIN_CNF_SENSE_Low     << GPIO_PIN_CNF_SENSE_Pos;
+  
+  NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_PORT_Enabled << GPIOTE_INTENSET_PORT_Pos;
+  NVIC_SetPriority(GPIOTE_IRQn, 3);
+  NVIC_EnableIRQ(GPIOTE_IRQn);
+}
+
+void GPIOTE_IRQHandler(void)
+{
+  NRF_GPIOTE->EVENTS_PORT = 0;
+  if ((NRF_GPIO->IN & (1UL << BUTTON_VOLUME_UP)) == 0)
+  {
+    max9850_volume_up();
+  }
+  
+  if ((NRF_GPIO->IN & (1UL << BUTTON_VOLUME_DOWN)) == 0)
+  {
+    max9850_volume_down();
+  }
+}
+
 int main(int argc, char *argv[])
 {
   int compressed_length;
@@ -53,6 +93,8 @@ int main(int argc, char *argv[])
   NRF_CLOCK->EVENTS_HFCLKSTARTED = 0;
   NRF_CLOCK->TASKS_HFCLKSTART = 1;
   while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0);
+
+  button_cfg();
 
   printf("decoder init\n");
   decoder_wrapper_init(m_dec_buf, sizeof(m_dec_buf));
@@ -100,7 +142,7 @@ int main(int argc, char *argv[])
           frame_size = codec_wrapper_decode(NULL, p_data->len, &m_stream[i2s_stream_sel][0], NUM_SAMPLES);
         }
         NRF_TIMER2->TASKS_CAPTURE[0] = 1;
-        printf("Decoded: %d %d in %d us\n", p_data->len, frame_size, NRF_TIMER2->CC[0]);
+        // printf("Decoded: %d %d in %d us\n", p_data->len, frame_size, NRF_TIMER2->CC[0]);
         if (frame_size <= 0)
         {
           printf("codec_wrapper_decode Err_code = %d\n", frame_size);
@@ -127,7 +169,7 @@ int main(int argc, char *argv[])
     {
       got_packet = 0;
       m_received_pkts++;
-      printf("recv_pkts = %d\n", m_received_pkts);
+      //printf("recv_pkts = %d\n", m_received_pkts);
     }
 
     __WFE();

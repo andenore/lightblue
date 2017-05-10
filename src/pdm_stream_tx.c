@@ -15,12 +15,16 @@
 
 /* 10 ms of sound @ 16kHz */
 #define NUM_SAMPLES (160)
+#define MAX_COMPRESSED_SIZE (M_STREAM_DATA_LEN)
 
-#define MAX_COMPRESSED_SIZE (255)
+#define BUTTON_VOLUME_UP    (12)
+#define BUTTON_VOLUME_DOWN  (2)
 
 void assert_handler(char *buf, uint16_t line)
 {
-  DEBUG_SET(3);
+  DEBUG_CLR(0);
+  DEBUG_CLR(1);
+  DEBUG_SET(2);
 
   printf("Assertion %s @ %d\n", buf, line);
 
@@ -45,10 +49,48 @@ static unsigned char out[MAX_COMPRESSED_SIZE];
 
 uint8_t m_enc_buf[8964];
 
+
+void button_cfg(void)
+{
+  NRF_GPIO->PIN_CNF[BUTTON_VOLUME_UP] = 
+                          GPIO_PIN_CNF_DIR_Input     << GPIO_PIN_CNF_DIR_Pos |
+                          GPIO_PIN_CNF_DRIVE_S0S1    << GPIO_PIN_CNF_DRIVE_Pos |
+                          GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos | 
+                          GPIO_PIN_CNF_PULL_Pullup   << GPIO_PIN_CNF_PULL_Pos | 
+                          GPIO_PIN_CNF_SENSE_Low     << GPIO_PIN_CNF_SENSE_Pos;
+  
+  NRF_GPIO->PIN_CNF[BUTTON_VOLUME_DOWN] = 
+                          GPIO_PIN_CNF_DIR_Input     << GPIO_PIN_CNF_DIR_Pos |
+                          GPIO_PIN_CNF_DRIVE_S0S1    << GPIO_PIN_CNF_DRIVE_Pos |
+                          GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos | 
+                          GPIO_PIN_CNF_PULL_Pullup   << GPIO_PIN_CNF_PULL_Pos | 
+                          GPIO_PIN_CNF_SENSE_Low     << GPIO_PIN_CNF_SENSE_Pos;
+  
+  NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_PORT_Enabled << GPIOTE_INTENSET_PORT_Pos;
+  NVIC_SetPriority(GPIOTE_IRQn, 3);
+  NVIC_EnableIRQ(GPIOTE_IRQn);
+}
+
+void GPIOTE_IRQHandler(void)
+{
+  NRF_GPIOTE->EVENTS_PORT = 0;
+  if ((NRF_GPIO->IN & (1UL << BUTTON_VOLUME_UP)) == 0)
+  {
+    printf("up\n");
+    mic_gain_up();
+  }
+  
+  if ((NRF_GPIO->IN & (1UL << BUTTON_VOLUME_DOWN)) == 0)
+  {
+    printf("down\n");
+    mic_gain_down();
+  }
+}
+
 int main(int argc, char *argv[])
 {
   int compressed_length;
-  uint32_t pdm_end_t0, radio_addr_t0;
+  uint32_t pdm_end_t0, radio_addr_t0, encode_t0;
   printf("Starting PDM TX stream...\n");
 
   DEBUG_INIT();
@@ -59,6 +101,7 @@ int main(int argc, char *argv[])
 
   memset(&data, 0, sizeof(data));
 
+  button_cfg();
   encoder_wrapper_init(m_enc_buf, sizeof(m_enc_buf));
   stream_tx_start();
   mic_init();
@@ -93,9 +136,15 @@ int main(int argc, char *argv[])
 
     if (mic_events_end()) 
     {
+      NRF_TIMER2->TASKS_CAPTURE[2] = 1;
+      encode_t0 = NRF_TIMER2->CC[2];
       compressed_length = codec_wrapper_encode(&pdm_samples[pdm_buf_sel ^ 0x1][0], out, sizeof(out));
+      NRF_TIMER2->TASKS_CAPTURE[2] = 1;
+      printf("encode time = %d\n", NRF_TIMER2->CC[2] - encode_t0);
+
       memcpy(&data.buf[0], &out[0], compressed_length);
       data.len = compressed_length;
+      ASSERT(compressed_length <= MAX_COMPRESSED_SIZE);
 
       if (stream_q_put(&data) == 0)
       {

@@ -39,7 +39,7 @@ static opus_uint32 char_to_int(unsigned char ch[4])
 #define SAMPLE_RATE_HZ  (16000)
 #define APPLICATION     (OPUS_APPLICATION_RESTRICTED_LOWDELAY)
 #define BITRATE         (128)
-#define COMPLEXITY      (5)
+#define COMPLEXITY      (9)
 
 #define CHANNELS (2)
 #define MAX_FRAME_SIZE ((SAMPLE_RATE_HZ*FRAME_LENGTH_MS)/1000)

@@ -9,7 +9,7 @@
 
 #include <nrf51_to_nrf52.h>
 
-#if 0
+#if 1
 
 #define DEBUG_INIT() NRF_GPIO->DIRSET = (0xF << 6); NRF_GPIO->OUTSET = (0xF << 6);
 
@@ -21,7 +21,7 @@
 
 #define TEST_END() printf("\n"); }
 
-#endif
+#else
 
 #define DEBUG_INIT() 
 
@@ -34,3 +34,5 @@
 #define TEST_END() printf("\n"); }
 
 #endif
+
+#endif //__DEBUG_H
