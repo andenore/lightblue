@@ -6,6 +6,7 @@
 
 #include <nrf.h>
 #include <stdbool.h>
+#include <mic.h>
 
 #define MIC_PWR_CTRL (5)
 #define MIC_DOUT     (4)

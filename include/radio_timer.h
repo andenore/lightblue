@@ -48,6 +48,6 @@ void radio_timer_timeout_set(uint32_t tmo);
 
 uint32_t radio_timer_timeout_evt_get(void);
 
-void debug_print(void);
+void radio_timer_debug_print(void);
 
 #endif

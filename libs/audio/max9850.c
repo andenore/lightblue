@@ -89,10 +89,10 @@ void max9850_start(void)
   i2c_write(REG_VOLUME, 0x4E);
   tmo = 100000 ; while (tmo-- ) ;
   
-  i2c_write(REG_LRCLK_MSB, 0x80);
+  /* Set to non-integer mode, MCLK must be > 2.8160 MHz for 16kHz LRCLK */
+  i2c_write(REG_LRCLK_MSB, 0x00);
   tmo = 100000 ; while (tmo-- ) ;
-  
-  i2c_write(REG_LRCLK_LSB, 0x04);
+  i2c_write(REG_LRCLK_LSB, 0x0);
   tmo = 100000 ; while (tmo-- ) ;
   
   i2c_write(REG_DIGITAL_AUDIO, 0x08);

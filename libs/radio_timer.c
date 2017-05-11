@@ -154,7 +154,7 @@ uint32_t radio_timer_timeout_evt_get(void)
 	return timer_timeout_evt_get();
 }
 
-void debug_print(void)
+void radio_timer_debug_print(void)
 {
 	volatile radio_timer_t *p_curr = p_timer_head;
 	printf("debug_print:\n");

@@ -118,6 +118,6 @@ void SWI0_EGU0_IRQHandler(void)
 		cc = NRF_TIMER1->CC[0];
 		diff = M_SCHEDULING_INTERVAL - cc;
 		printf("CC = %d\n", diff);
-		// debug_print();
+		// radio_timer_debug_print();
 	}
 }

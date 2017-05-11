@@ -11,6 +11,8 @@
 #include <debug.h>
 #include <assert.h>
 #include <stream.h>
+#include <mic.h>
+#include <codec_wrapper.h>
 #include "SEGGER_RTT.h"
 
 /* 10 ms of sound @ 16kHz */
@@ -35,7 +37,7 @@ void assert_handler(char *buf, uint16_t line)
 
   printf("Assertion %s @ %d\n", buf, line);
 
-  debug_print();
+  radio_timer_debug_print();
 
   while (1);
 }
@@ -171,7 +173,7 @@ int main(int argc, char *argv[])
 
       SYNC_TIMER->TASKS_CAPTURE[2] = 1;
       encode_t0 = SYNC_TIMER->CC[2];
-      compressed_length = codec_wrapper_encode(&pdm_samples[pdm_buf_sel ^ 0x1][0], out, sizeof(out));
+      compressed_length = codec_wrapper_encode((int16_t *)&pdm_samples[pdm_buf_sel ^ 0x1][0], out, sizeof(out));
       SYNC_TIMER->TASKS_CAPTURE[2] = 1;
       // printf("encode time = %d\n", SYNC_TIMER->CC[2] - encode_t0);
 

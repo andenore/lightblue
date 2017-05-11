@@ -11,6 +11,9 @@
 #include <debug.h>
 #include <assert.h>
 #include <stream.h>
+#include <codec_wrapper.h>
+#include <max9850.h>
+#include <i2s_lib.h>
 #include "SEGGER_RTT.h"
 
 /* 10 ms of sound @ 16kHz */
@@ -29,7 +32,7 @@ void assert_handler(char *buf, uint16_t line)
 
   printf("Assertion %s @ %d\n", buf, line);
 
-  debug_print();
+  radio_timer_debug_print();
 
   while (1);
 }
@@ -85,7 +88,6 @@ void GPIOTE_IRQHandler(void)
 
 int main(int argc, char *argv[])
 {
-  int compressed_length;
   printf("Starting PDM RX stream...\n");
 
   DEBUG_INIT();
@@ -111,7 +113,7 @@ int main(int argc, char *argv[])
   printf("i2s init\n");
 
   i2s_init();
-  i2s_txptr_cfg(&m_stream[0][0], NUM_SAMPLES);
+  i2s_txptr_cfg((uint8_t *)&m_stream[0][0], NUM_SAMPLES);
 
   printf("i2s_start\n");
   i2s_start();
@@ -135,11 +137,11 @@ int main(int argc, char *argv[])
         NRF_TIMER2->TASKS_CLEAR = 1;
         if (p_data->len != 0)
         {
-          frame_size = codec_wrapper_decode(&p_data->buf[0], p_data->len, &m_stream[i2s_stream_sel][0], NUM_SAMPLES);
+          frame_size = codec_wrapper_decode(&p_data->buf[0], p_data->len, (int16_t *)&m_stream[i2s_stream_sel][0], NUM_SAMPLES);
         }
         else
         {
-          frame_size = codec_wrapper_decode(NULL, p_data->len, &m_stream[i2s_stream_sel][0], NUM_SAMPLES);
+          frame_size = codec_wrapper_decode(NULL, p_data->len, (int16_t *)&m_stream[i2s_stream_sel][0], NUM_SAMPLES);
         }
         NRF_TIMER2->TASKS_CAPTURE[0] = 1;
         // printf("Decoded: %d %d in %d us\n", p_data->len, frame_size, NRF_TIMER2->CC[0]);
@@ -153,7 +155,7 @@ int main(int argc, char *argv[])
       {
         printf("Buffer underrun or packet lost\n");
         m_received_pkts = 0;
-        frame_size = codec_wrapper_decode(NULL, 0, &m_stream[i2s_stream_sel][0], NUM_SAMPLES);
+        frame_size = codec_wrapper_decode(NULL, 0, (int16_t *)&m_stream[i2s_stream_sel][0], NUM_SAMPLES);
         if (frame_size <= 0)
         {
           printf("codec_wrapper_decode Err_code = %d\n", frame_size);
@@ -161,7 +163,7 @@ int main(int argc, char *argv[])
 
       }
 
-      i2s_txptr_cfg(&m_stream[i2s_stream_sel][0], NUM_SAMPLES);
+      i2s_txptr_cfg((uint8_t *)&m_stream[i2s_stream_sel][0], NUM_SAMPLES);
       // printf("switch stream %d\n", NRF_TIMER2->CC[0]);
     };
 

@@ -11,6 +11,10 @@
 #include <debug.h>
 #include <assert.h>
 #include <stream.h>
+#include <mic.h>
+#include <i2s_lib.h>
+#include <max9850.h>
+#include <codec_wrapper.h>
 #include "SEGGER_RTT.h"
 
 /* 10 ms of sound @ 16kHz */
@@ -24,9 +28,9 @@ void assert_handler(char *buf, uint16_t line)
 
   printf("Assertion %s @ %d\n", buf, line);
 
-  printf("Stack pointer 0x%08x", __get_MSP());
+  printf("Stack pointer 0x%08x", (unsigned int)__get_MSP());
 
-  debug_print();
+  radio_timer_debug_print();
 
   while (1);
 }
@@ -35,7 +39,7 @@ void HardFault_Handler(void)
 {
   DEBUG_SET(3);
 
-  printf("Stack pointer 0x%08x\n", __get_MSP());
+  printf("Stack pointer 0x%08x\n", (unsigned int)__get_MSP());
   printf("HardFault_Handler...\n");
   while (1);
 }
@@ -72,7 +76,7 @@ int main(int argc, char *argv[])
 
   printf("i2s init\n");
   i2s_init();
-  i2s_txptr_cfg(&m_stream[0][0], NUM_SAMPLES);
+  i2s_txptr_cfg((uint8_t *)&m_stream[0][0], NUM_SAMPLES);
 
   printf("mic_start\n");
   mic_start();
@@ -99,7 +103,7 @@ int main(int argc, char *argv[])
       // NRF_TIMER2->TASKS_CAPTURE[0] = 1;
       // NRF_TIMER2->TASKS_CLEAR = 1;
       i2s_stream_sel ^= 0x1;
-      i2s_txptr_cfg(&m_stream[i2s_stream_sel][0], NUM_SAMPLES);
+      i2s_txptr_cfg((uint8_t *)&m_stream[i2s_stream_sel][0], NUM_SAMPLES);
       // printf("switch stream %d\n", NRF_TIMER2->CC[0]);
     };
 
@@ -114,10 +118,10 @@ int main(int argc, char *argv[])
 
       for (int i=0; i<NUM_SAMPLES; i++)
       {
-        printf("%08x ", m_stream[pdm_stream_sel][i]);
+        printf("%08x ", (unsigned int)m_stream[pdm_stream_sel][i]);
       }
       printf("\n");
-      printf("frame_size = %d, encode+decode in %d us", frame_size, NRF_TIMER2->CC[0]); 
+      printf("frame_size = %d, encode+decode in %d us", (int)frame_size, (unsigned int)NRF_TIMER2->CC[0]); 
 
       pdm_stream_sel ^= 0x1;
       mic_rxptr_cfg(&m_stream[pdm_stream_sel][0], NUM_SAMPLES*4);
